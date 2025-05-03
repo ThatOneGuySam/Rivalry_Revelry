@@ -44,6 +44,57 @@ export class Edge{
     }
 }
 
+export class Path{
+    vertices: Vertex[];
+    edges: Edge[];
+    steps: number;
+    weight: number;
+    constructor(v: Vertex[] = [], e: Edge[] = []){
+        this.vertices = v;
+        this.edges = e;
+        this.steps = this.vertices.length;
+        this.weight = 0;
+        for(let i =0; i <= this.edges.length; i++){
+            this.weight += this.edges[i].weight;
+        }
+    }
+
+    starterVertex(v: Vertex): void{
+        this.vertices.push(v);
+    }
+
+    addVertexAndEdge(v: Vertex, e: Edge): void{
+        //Add vertex into system
+        this.vertices.push(v);
+        this.edges.push(e);
+        this.steps++;
+        this.weight += e.weight;
+    }
+
+    addVertexByGraph(v: Vertex, g: Graph): void{
+        const edgeToInsert: Edge | undefined = g.findEdge(this.vertices[this.vertices.length-1],v);
+        if(!edgeToInsert){
+            console.error("Attempted to add non-existent edge to path");
+            return;
+        }
+        this.vertices.push(v);
+        this.edges.push(edgeToInsert);
+        this.steps++;
+        this.weight += edgeToInsert.weight;
+
+    }
+
+    vertexInPath(searchName: string): Boolean{
+        return this.vertices.some(step => step.name === searchName);
+    }
+
+    evenParity(): Boolean{
+        //Counter-intuitive, but check for oddness because of first step being source
+        return this.vertices.length % 2 === 1
+    }
+
+}
+
 export class Graph{
     vertices: Vertex[];
     edges: Edge[];
@@ -116,4 +167,103 @@ export class Graph{
             from.edges = from.edges.filter(e => e.dest !== to);
         }
     }
+
+    Dijkstra(source: string): Map<string, Path>{
+        const pathSet = new Map<string, Path>();
+        const visited = new Set<Vertex>();
+        
+        const priorityQueue: [Vertex, number][] = [];
+
+        const sourceVertex = this.findVertex(source);
+        if(!sourceVertex){
+            console.error("Search on non-existent vertex");
+            return new Map<string, Path>();
+        }
+
+        pathSet.set(source, new Path([sourceVertex],[]));
+        priorityQueue.push([sourceVertex, 0]);
+
+        while (priorityQueue.length > 0) {
+            // Sort to get vertex with smallest distance (replace with min-heap for better performance)
+            priorityQueue.sort((a, b) => a[1] - b[1]);
+            const [current, currentDist] = priorityQueue.shift()!;
+            if (visited.has(current)) continue;
+            visited.add(current);
+
+            const currentPath = pathSet.get(current.name)!;
+      
+            for (const edge of current.edges) {
+              const neighbor: Vertex = edge.dest;
+              const newDist: number = currentDist + edge.weight;
+              if ((!pathSet.get(neighbor.name)) || (newDist < (pathSet.get(neighbor.name)!.weight))) {
+                const newPath = new Path(currentPath.vertices, currentPath.edges);
+                newPath.addVertexByGraph(neighbor,this);
+                pathSet.set(neighbor.name,newPath);
+                priorityQueue.push([neighbor, newDist]);
+              }
+            }
+          }
+
+        return pathSet;
+    }
+
+    DijkstraParity(source: string): Object{
+        const evenPathSet = new Map<string, Path>();
+        const oddPathSet = new Map<string, Path>();
+        const evenVisited = new Set<Vertex>();
+        const oddVisited = new Set<Vertex>();
+        
+        const evenPriorityQueue: [Vertex, number][] = [];
+        const oddPriorityQueue: [Vertex, number][] = [];
+
+        const sourceVertex = this.findVertex(source);
+        if(!sourceVertex){
+            console.error("Search on non-existent vertex");
+            return {};
+        }
+
+        evenPathSet.set(source, new Path([sourceVertex],[]));
+        oddPriorityQueue.push([sourceVertex, 0]);
+
+        while (evenPriorityQueue.length > 0 || oddPriorityQueue.length > 0) {
+            evenPriorityQueue.sort((a, b) => a[1] - b[1]);
+            oddPriorityQueue.sort((a,b) => a[1] - b[1]);
+            if(evenPriorityQueue.length === 0 || (oddPriorityQueue.length > 0 && oddPriorityQueue[0][1] < evenPriorityQueue[0][1])){
+                const [current, currentDist] = oddPriorityQueue.shift()!;
+                if (oddVisited.has(current)) continue;
+                oddVisited.add(current);
+                const currentPath = oddPathSet.get(current.name)!;
+
+                for (const edge of current.edges) {
+                    const neighbor: Vertex = edge.dest;
+                    const newDist: number = currentDist + edge.weight;
+                    if ((!evenPathSet.get(neighbor.name)) || (newDist < (evenPathSet.get(neighbor.name)!.weight))) {
+                      const newPath = new Path(currentPath.vertices, currentPath.edges);
+                      newPath.addVertexByGraph(neighbor,this);
+                      evenPathSet.set(neighbor.name,newPath);
+                      evenPriorityQueue.push([neighbor, newDist]);
+                    }
+                  }
+            }else{
+                const [current, currentDist] = evenPriorityQueue.shift()!;
+                if (evenVisited.has(current)) continue;
+                evenVisited.add(current);
+                const currentPath = evenPathSet.get(current.name)!;
+
+                for (const edge of current.edges) {
+                    const neighbor: Vertex = edge.dest;
+                    const newDist: number = currentDist + edge.weight;
+                    if ((!oddPathSet.get(neighbor.name)) || (newDist < (oddPathSet.get(neighbor.name)!.weight))) {
+                      const newPath = new Path(currentPath.vertices, currentPath.edges);
+                      newPath.addVertexByGraph(neighbor,this);
+                      oddPathSet.set(neighbor.name,newPath);
+                      oddPriorityQueue.push([neighbor, newDist]);
+                    }
+                  }
+            }
+          }
+
+        return {"even": evenPathSet, "odd": oddPathSet};
+    }
+
 }
