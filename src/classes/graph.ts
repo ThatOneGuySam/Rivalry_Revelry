@@ -49,12 +49,12 @@ export class Path{
     edges: Edge[];
     steps: number;
     weight: number;
-    constructor(v: Vertex[] = [], e: Edge[] = []){
+    constructor(v: Vertex[], e: Edge[]){
         this.vertices = v;
         this.edges = e;
         this.steps = this.vertices.length;
         this.weight = 0;
-        for(let i =0; i <= this.edges.length; i++){
+        for(let i =0; i < this.edges.length; i++){
             this.weight += this.edges[i].weight;
         }
     }
@@ -91,6 +91,17 @@ export class Path{
     evenParity(): Boolean{
         //Counter-intuitive, but check for oddness because of first step being source
         return this.vertices.length % 2 === 1
+    }
+
+    stringForm(): string{
+        let currString = "";
+        for(let i = 0; i < this.vertices.length; i++){
+            currString += this.vertices[i].name;
+            if(i < this.vertices.length - 1){
+                currString += " --> "
+            }
+        }
+        return currString;
     }
 
 }
@@ -183,21 +194,25 @@ export class Graph{
         pathSet.set(source, new Path([sourceVertex],[]));
         priorityQueue.push([sourceVertex, 0]);
 
+
         while (priorityQueue.length > 0) {
             // Sort to get vertex with smallest distance (replace with min-heap for better performance)
             priorityQueue.sort((a, b) => a[1] - b[1]);
             const [current, currentDist] = priorityQueue.shift()!;
             if (visited.has(current)) continue;
             visited.add(current);
-
+        
             const currentPath = pathSet.get(current.name)!;
       
             for (const edge of current.edges) {
               const neighbor: Vertex = edge.dest;
               const newDist: number = currentDist + edge.weight;
               if ((!pathSet.get(neighbor.name)) || (newDist < (pathSet.get(neighbor.name)!.weight))) {
-                const newPath = new Path(currentPath.vertices, currentPath.edges);
-                newPath.addVertexByGraph(neighbor,this);
+                const newPath = new Path(
+                    [...currentPath.vertices],
+                    [...currentPath.edges]
+                );
+                newPath.addVertexAndEdge(neighbor,edge);
                 pathSet.set(neighbor.name,newPath);
                 priorityQueue.push([neighbor, newDist]);
               }
@@ -238,10 +253,13 @@ export class Graph{
                     const neighbor: Vertex = edge.dest;
                     const newDist: number = currentDist + edge.weight;
                     if ((!evenPathSet.get(neighbor.name)) || (newDist < (evenPathSet.get(neighbor.name)!.weight))) {
-                      const newPath = new Path(currentPath.vertices, currentPath.edges);
-                      newPath.addVertexByGraph(neighbor,this);
-                      evenPathSet.set(neighbor.name,newPath);
-                      evenPriorityQueue.push([neighbor, newDist]);
+                        const newPath = new Path(
+                            [...currentPath.vertices],
+                            [...currentPath.edges]
+                        );
+                        newPath.addVertexByGraph(neighbor,this);
+                        evenPathSet.set(neighbor.name,newPath);
+                        evenPriorityQueue.push([neighbor, newDist]);
                     }
                   }
             }else{
@@ -254,10 +272,13 @@ export class Graph{
                     const neighbor: Vertex = edge.dest;
                     const newDist: number = currentDist + edge.weight;
                     if ((!oddPathSet.get(neighbor.name)) || (newDist < (oddPathSet.get(neighbor.name)!.weight))) {
-                      const newPath = new Path(currentPath.vertices, currentPath.edges);
-                      newPath.addVertexByGraph(neighbor,this);
-                      oddPathSet.set(neighbor.name,newPath);
-                      oddPriorityQueue.push([neighbor, newDist]);
+                        const newPath = new Path(
+                            [...currentPath.vertices],
+                            [...currentPath.edges]
+                        );
+                        newPath.addVertexByGraph(neighbor,this);
+                        oddPathSet.set(neighbor.name,newPath);
+                        oddPriorityQueue.push([neighbor, newDist]);
                     }
                   }
             }
