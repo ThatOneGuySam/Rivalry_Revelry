@@ -12,11 +12,18 @@ export class Vertex{
     conference: string;
     name: string;
     edges: Edge[];
+    logoPath: string;
+    logo_name: string;
+    spellings: string[];
+    
 
-    constructor(name: string, conference: string){
+    constructor(name: string, conference: string, logo_name: string, alt_spellings: string[]){
         this.name = name;
         this.conference = conference;
         this.edges = [];
+        this.logo_name = logo_name;
+        this.logoPath = this.logo_name.replace(/ /g,"_");
+        this.spellings = [this.name, this.logo_name, ...alt_spellings];
     }
 
     addEdge(e: Edge): void{
@@ -74,7 +81,7 @@ export class Path{
     addVertexByGraph(v: Vertex, g: Graph): void{
         const edgeToInsert: Edge | undefined = g.findEdge(this.vertices[this.vertices.length-1],v);
         if(!edgeToInsert){
-            console.error("Attempted to add non-existent edge to path");
+            console.error("Attempted to add non-existent edge to path", v);
             return;
         }
         this.vertices.push(v);
@@ -120,12 +127,12 @@ export class Graph{
         this.vertices.push(v);
     }
 
-    addVertexByName(n: string, c: string): void{
-        this.vertices.push(new Vertex(n, c))
+    addVertexByName(name: string, conf: string, l_name: string, alts: string[]): void{
+        this.vertices.push(new Vertex(name, conf, l_name, alts))
     }
 
-    addConference(conference: string, names: string[]){
-        names.forEach((ne) => this.addVertexByName(ne, conference));
+    addConference(conference: string, names: string[], l_names: string[], alts_s: string[][]){
+        names.forEach((ne: string, index: number) => this.addVertexByName(ne, conference, l_names[index], alts_s[index]));
     }
 
     makeEdge(from: Vertex, to: Vertex, strength: number): void{
@@ -137,13 +144,13 @@ export class Graph{
         const v: Vertex | undefined = this.findVertex(name);
         const maxStrength: number = Math.max(...strengths);
         if(!v){
-            console.error("Attempted to add edges to non existent vertex");
+            console.error("Attempted to add edges to non existent vertex", name, dests);
             return;
         }
         for(let i = 0; i < dests.length; i++){
             const d: Vertex | undefined = this.findVertex(dests[i]);
             if(!d){
-                console.error("Attempted to direct edge to non existent vertex");
+                console.error("Attempted to direct edge to non existent vertex", name, dests[i]);
                 continue;
             }
             this.makeEdge(v, d, (10*strengths[i]/maxStrength));

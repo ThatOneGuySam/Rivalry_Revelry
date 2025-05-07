@@ -81,7 +81,7 @@ function App() {
       </FormControl>
 
       <FormControl fullWidth>
-        <InputLabel id="teamB">First Team Playing</InputLabel>
+        <InputLabel id="teamB">Second Team Playing</InputLabel>
         <Select
           labelId="teamB"
           value={teamB}
