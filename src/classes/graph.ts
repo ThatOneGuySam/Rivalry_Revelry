@@ -12,9 +12,9 @@ export class Vertex{
     conference: string;
     name: string;
     edges: Edge[];
-    logoPath: string;
     logo_name: string;
     spellings: string[];
+    private logo_dir: string = "/assets/CFB Logos/"
     
 
     constructor(name: string, conference: string, logo_name: string, alt_spellings: string[]){
@@ -22,12 +22,15 @@ export class Vertex{
         this.conference = conference;
         this.edges = [];
         this.logo_name = logo_name;
-        this.logoPath = this.logo_name.replace(/ /g,"_");
         this.spellings = [this.name, this.logo_name, ...alt_spellings];
     }
 
     addEdge(e: Edge): void{
         this.edges.push(e);
+    }
+
+    logoPath(): string{
+        return `${this.logo_dir}${this.logo_name.replace(/ /g,"_")}.png`
     }
 }
 
