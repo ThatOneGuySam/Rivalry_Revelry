@@ -62,7 +62,7 @@ export function makeOriginalWeb(): Graph{
     curr_graph.addVertex(new Vertex("Kentucky", "SEC", "Kentucky Wildcats", ["UK"]));
     curr_graph.addVertex(new Vertex("Liberty", "CUSA", "Liberty Flames", []));
     curr_graph.addVertex(new Vertex("ULM", "Sunbelt", "Louisiana Monroe Warhawks", ["UL Monroe", "La.-Monroe"]));
-    curr_graph.addVertex(new Vertex("Louisiana", "Sunbelt", "Louisana Ragin Cajuns", ["UL Lafayette", "UL", "Louisiana Lafayette"]));
+    curr_graph.addVertex(new Vertex("Louisiana", "Sunbelt", "Louisiana Ragin Cajuns", ["UL Lafayette", "UL", "Louisiana Lafayette"]));
     curr_graph.addVertex(new Vertex("Louisiana Tech", "CUSA", "Louisiana Tech Bulldogs", ["LA Tech", "LT"]));
     curr_graph.addVertex(new Vertex("Louisville", "ACC", "Louisville Cardinals", []));
     curr_graph.addVertex(new Vertex("LSU", "SEC", "LSU Tigers", ["Louisiana State"]));
@@ -83,7 +83,7 @@ export function makeOriginalWeb(): Graph{
     curr_graph.addVertex(new Vertex("Nebraska", "B10", "Nebraska Cornhuskers", []));
     curr_graph.addVertex(new Vertex("Nevada", "MW", "Nevada Wolf Pack", []));
     curr_graph.addVertex(new Vertex("New Mexico", "MW", "New Mexico Lobos", ["UNM"]));
-    curr_graph.addVertex(new Vertex("New Mexico St", "CUSA", "Nex Mexico State Aggies", ["NMSU"]));
+    curr_graph.addVertex(new Vertex("New Mexico St", "CUSA", "New Mexico State Aggies", ["NMSU"]));
     curr_graph.addVertex(new Vertex("UNC", "ACC", "North Carolina Tar Heels", []));
     curr_graph.addVertex(new Vertex("North Texas", "AAC", "North Texas Mean Green", ["UNT"]));
     curr_graph.addVertex(new Vertex("NIU", "MW", "Northern Illinois Huskies", ["N Illinois"]));

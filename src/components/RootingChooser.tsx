@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Select, MenuItem, FormControl, InputLabel, Typography, Button, Box } from "@mui/material";
+import { Select, MenuItem, FormControl, InputLabel, Typography, Button, Box, Autocomplete, TextField } from "@mui/material";
 import { Vertex, Path, Graph } from '../classes/graph';
 import { makeOriginalWeb } from '../data/rivalryWeb';
+import TeamIcon from './TeamIcon';
+import CustomArrow from './customArrow';
 
 const RootingChooser = () => {
       const [teamFan, setFan] = useState("");
@@ -9,12 +11,23 @@ const RootingChooser = () => {
       const [teamB, setTeamB] = useState("");
       const [rootFor, setRootFor] = useState("");
       const [rootPath, setRootPath] = useState(new Path([],[]));
+      const [value, setValue] = useState<string | null>(null);
     
       const rivalryWeb: Graph = makeOriginalWeb();
     
       const teamOptions: Vertex[] = rivalryWeb.vertices;
+      const nameOptions: string[] = teamOptions.map((v) => v.name);
 
-      console.log(teamOptions[0].logoPath());
+      const filteredOptions = nameOptions
+    .filter(option => {
+      try {
+        const regex = new RegExp(teamFan, 'i');
+        return regex.test(option);
+      } catch {
+        return false; // invalid regex input
+      }
+    })
+    .slice(0, 5);
 
       function findResult(){
         const paths = rivalryWeb.Dijkstra(teamFan);
@@ -33,16 +46,24 @@ const RootingChooser = () => {
         <Box>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem", width: "200px" }}>
                 <FormControl fullWidth>
-                    <InputLabel id="fan-team">Your Team</InputLabel>
-                    <Select
-                    labelId="Fandom"
-                    value={teamFan}
-                    onChange={(e) => setFan(e.target.value)}
-                    >
-                    {teamOptions.map((team) => (
-                        <MenuItem key={team.name} value={team.name}><img src={team.logoPath()} style={{width: "50px", height: "50px"}}/>{team.name}</MenuItem>
-                    ))}
-                    </Select>
+                    {//<InputLabel id="fan-team">Your Team</InputLabel>
+                    //Note in case I forget: function parameter I'm leaving blank is event
+                    }
+                    <Autocomplete
+                        value={value}
+                        onChange={(_, newValue) => {
+                            if (nameOptions.includes(newValue || '')) {
+                            setValue(newValue);
+                            }
+                        }}
+                        inputValue={teamFan}
+                        onInputChange={(_, newTeamFan) => {
+                            setFan(newTeamFan);
+                        }}
+                        options={filteredOptions}
+                        renderInput={(params) => <TextField {...params} label="Your Team" />}
+                        freeSolo={false} // ensures value must come from list
+                        />
                 </FormControl>
 
                 <FormControl fullWidth>
@@ -89,9 +110,12 @@ const RootingChooser = () => {
                     You should be rooting for {rootFor} due to the following rivalries
                     </Typography>}
                 {rootPath && 
-                <Typography variant="h5">
-                    {rootPath.stringForm()}
-                    </Typography>}
+                rootPath.vertices.map((step) => {
+                    return <Box>
+                        <TeamIcon key={step.name} logoPath={step.logoPath()} team_name={step.logo_name}/>
+                        <CustomArrow />
+                    </Box>;
+                })}
                 </div>
         </Box>
       )
