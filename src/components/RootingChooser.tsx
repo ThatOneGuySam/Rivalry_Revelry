@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Select, MenuItem, FormControl, InputLabel, Typography, Button, Box, Autocomplete, TextField } from "@mui/material";
+import { Select, MenuItem, FormControl, InputLabel, Typography, Button, Box, Autocomplete, TextField, Avatar } from "@mui/material";
 import { Vertex, Path, Graph } from '../classes/graph';
 import { makeOriginalWeb } from '../data/rivalryWeb';
 import TeamIcon from './TeamIcon';
@@ -11,23 +11,24 @@ const RootingChooser = () => {
       const [teamB, setTeamB] = useState("");
       const [rootFor, setRootFor] = useState("");
       const [rootPath, setRootPath] = useState(new Path([],[]));
-      const [value, setValue] = useState<string | null>(null);
+      const [value, setValue] = useState<Vertex | null>(null);
+      const [boxAFocus, setBoxAFocus] = useState<boolean>(false);
     
       const rivalryWeb: Graph = makeOriginalWeb();
     
       const teamOptions: Vertex[] = rivalryWeb.vertices;
-      const nameOptions: string[] = teamOptions.map((v) => v.name);
+      //const nameOptions: string[] = teamOptions.map((v) => v.name);
 
-      const filteredOptions = nameOptions
-    .filter(option => {
-      try {
-        const regex = new RegExp(teamFan, 'i');
-        return regex.test(option);
-      } catch {
-        return false; // invalid regex input
-      }
-    })
-    .slice(0, 5);
+      const filteredOptions = teamOptions
+            .filter(option => {
+            try {
+                const regex = new RegExp(teamFan, 'i');
+                return regex.test(option.name);
+            } catch {
+                return false; // invalid regex input
+            }
+            })
+            .slice(0, 5);
 
       function findResult(){
         const paths = rivalryWeb.Dijkstra(teamFan);
@@ -50,19 +51,47 @@ const RootingChooser = () => {
                     //Note in case I forget: function parameter I'm leaving blank is event
                     }
                     <Autocomplete
+                        options={filteredOptions}
                         value={value}
                         onChange={(_, newValue) => {
-                            if (nameOptions.includes(newValue || '')) {
+                            if (!newValue || teamOptions.includes(newValue!)) {
                             setValue(newValue);
                             }
                         }}
+                        getOptionLabel={(option) => option.name}
                         inputValue={teamFan}
                         onInputChange={(_, newTeamFan) => {
                             setFan(newTeamFan);
                         }}
-                        options={filteredOptions}
-                        renderInput={(params) => <TextField {...params} label="Your Team" />}
-                        freeSolo={false} // ensures value must come from list
+                        renderOption={(props, option) => (
+                            <MenuItem {...props} key={option.name}>
+                            <img
+                                src={option.logoPath()}
+                                alt={option.name}
+                                style={{ width: '50px', height: '50px', marginRight: 8 }}
+                            />
+                            {option.name}
+                            </MenuItem>
+                        )}
+                        renderInput={(params) => (
+                            <TextField
+                            {...params}
+                            label="Your Team"
+                            onFocus={() => setBoxAFocus(true)}
+                            onBlur={() => setBoxAFocus(false)}
+                            InputProps={{
+                                ...params.InputProps,
+                                startAdornment: value && !boxAFocus ? (
+                                <Avatar
+                                    src={value.logoPath()}
+                                    alt={value.name}
+                                    sx={{ width: 50, height: 50, marginRight: 1 }}
+                                />
+                                ) : null,
+                            }}
+                            />)
+                        }
+                        freeSolo={false}
                         />
                 </FormControl>
 
