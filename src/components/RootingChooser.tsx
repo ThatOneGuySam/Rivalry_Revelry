@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Select, MenuItem, FormControl, InputLabel, Typography, Button, Box, Autocomplete, TextField, Avatar } from "@mui/material";
+import { MenuItem, FormControl, Typography, Button, Box, Autocomplete, TextField, Avatar } from "@mui/material";
 import { Vertex, Path, Graph } from '../classes/graph';
 import { makeOriginalWeb } from '../data/rivalryWeb';
 import Fuse from 'fuse.js';
@@ -12,8 +12,12 @@ const RootingChooser = () => {
       const [teamB, setTeamB] = useState("");
       const [rootFor, setRootFor] = useState("");
       const [rootPath, setRootPath] = useState(new Path([],[]));
-      const [value, setValue] = useState<Vertex | null>(null);
-      const [boxAFocus, setBoxAFocus] = useState<boolean>(false);
+      const [valueA, setValueA] = useState<Vertex | null>(null);
+      const [valueB, setValueB] = useState<Vertex | null>(null);
+      const [valueC, setValueC] = useState<Vertex | null>(null);
+      const [hideLogoA, sethideLogoA] = useState<boolean>(false);
+      const [hideLogoB, sethideLogoB] = useState<boolean>(false);
+      const [hideLogoC, sethideLogoC] = useState<boolean>(false);
       
     
       const rivalryWeb: Graph = makeOriginalWeb();
@@ -45,7 +49,7 @@ const RootingChooser = () => {
         }, [spellingsToItemMap]);
 
         // Search
-        function fuzzySearchItems(query: string, maxResults = 5): Vertex[] {
+        function fuzzySearchItems(query: string, maxResults = 10): Vertex[] {
             const results = fuse.search(query);
           
             const bestScores = new Map<Vertex, number>();
@@ -58,14 +62,17 @@ const RootingChooser = () => {
                 bestScores.set(vertex, score);
               }
             }
-            console.log(bestScores);
             // Sort by best score
             const sorted = Array.from(bestScores.entries())
               .sort((a, b) => a[1] - b[1])
               .slice(0, maxResults)
               .map(([vertex]) => vertex);
 
-            setFilteredOptions(sorted);
+              if(sorted.length > 0){
+                setFilteredOptions(sorted);
+              }else{
+                setFilteredOptions(teamOptions);
+              }
           
             return sorted;
         }
@@ -86,7 +93,7 @@ const RootingChooser = () => {
 
       return (
         <Box>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem", width: "200px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "5rem" }}>
                 <FormControl fullWidth>
                     {//<InputLabel id="fan-team">Your Team</InputLabel>
                     //Note in case I forget: function parameter I'm leaving blank is event
@@ -94,10 +101,11 @@ const RootingChooser = () => {
                     <Autocomplete
                         options={filteredOptions}
                         filterOptions={(x) => x}
-                        value={value}
+                        value={valueA}
                         onChange={(_, newValue) => {
                             if (!newValue || teamOptions.includes(newValue!)) {
-                            setValue(newValue);
+                            setValueA(newValue);
+                            sethideLogoA(false);
                             }
                         }}
                         getOptionLabel={(option) => option.name}
@@ -105,13 +113,14 @@ const RootingChooser = () => {
                         onInputChange={(_, newTeamFan) => {
                             setFan(newTeamFan);
                             fuzzySearchItems(newTeamFan);
+                            sethideLogoA(true);
                         }}
                         renderOption={(props, option) => (
-                            <MenuItem {...props} key={option.name}>
+                            <MenuItem {...props} key={option.name} sx={{fontSize: "2rem"}}>
                             <img
                                 src={option.logoPath()}
                                 alt={option.name}
-                                style={{ width: '50px', height: '50px', marginRight: 8 }}
+                                style={{ width: '100px', height: '100px', marginRight: 8 }}
                             />
                             {option.name}
                             </MenuItem>
@@ -119,16 +128,21 @@ const RootingChooser = () => {
                         renderInput={(params) => (
                             <TextField
                             {...params}
+                            sx={{'& .MuiInputBase-input': {
+                                fontSize: '2rem', // adjust as needed
+                            },}}
                             label="Your Team"
-                            onFocus={() => setBoxAFocus(true)}
-                            onBlur={() => setBoxAFocus(false)}
+                            onFocus={() => {
+                                fuzzySearchItems(teamFan);
+                            }}
+                            onBlur={() => sethideLogoA(false)}
                             InputProps={{
                                 ...params.InputProps,
-                                startAdornment: value && !boxAFocus ? (
+                                startAdornment: valueA && !hideLogoA ? (
                                 <Avatar
-                                    src={value.logoPath()}
-                                    alt={value.name}
-                                    sx={{ width: 50, height: 50, marginRight: 1 }}
+                                    src={valueA.logoPath()}
+                                    alt={valueA.name}
+                                    sx={{ width: 100, height: 100, marginRight: 1 }}
                                 />
                                 ) : null,
                             }}
@@ -139,29 +153,116 @@ const RootingChooser = () => {
                 </FormControl>
 
                 <FormControl fullWidth>
-                    <InputLabel id="teamA">First Team Playing</InputLabel>
-                    <Select
-                    labelId="teamA"
-                    value={teamA}
-                    onChange={(e) => setTeamA(e.target.value)}
-                    >
-                    {teamOptions.map((team) => (
-                        <MenuItem key={team.name} value={team.name}><img src={team.logoPath()} style={{width: "50px", height: "50px"}}/>{team.name}</MenuItem>
-                    ))}
-                    </Select>
+                    {//<InputLabel id="fan-team">Your Team</InputLabel>
+                    //Note in case I forget: function parameter I'm leaving blank is event
+                    }
+                    <Autocomplete
+                        options={filteredOptions}
+                        filterOptions={(x) => x}
+                        value={valueB}
+                        onChange={(_, newValue) => {
+                            if (!newValue || teamOptions.includes(newValue!)) {
+                            setValueB(newValue);
+                            sethideLogoB(false);
+                            }
+                        }}
+                        getOptionLabel={(option) => option.name}
+                        inputValue={teamA}
+                        onInputChange={(_, newTeamA) => {
+                            setTeamA(newTeamA);
+                            fuzzySearchItems(newTeamA);
+                            sethideLogoB(true);
+                        }}
+                        renderOption={(props, option) => (
+                            <MenuItem {...props} key={option.name} sx={{fontSize: "2rem"}}>
+                            <img
+                                src={option.logoPath()}
+                                alt={option.name}
+                                style={{ width: '100px', height: '100px', marginRight: 8 }}
+                            />
+                            {option.name}
+                            </MenuItem>
+                        )}
+                        renderInput={(params) => (
+                            <TextField
+                            {...params}
+                            sx={{'& .MuiInputBase-input': {
+                                fontSize: '2rem', // adjust as needed
+                            },}}
+                            label="First Team Playing"
+                            onFocus={() => {
+                                fuzzySearchItems(teamA);
+                            }}
+                            onBlur={() => sethideLogoB(false)}
+                            InputProps={{
+                                ...params.InputProps,
+                                startAdornment: valueB && !hideLogoB ? (
+                                <Avatar
+                                    src={valueB.logoPath()}
+                                    alt={valueB.name}
+                                    sx={{ width: 100, height: 100, marginRight: 1 }}
+                                />
+                                ) : null,
+                            }}
+                            />)
+                        }
+                        freeSolo={false}
+                        />
                 </FormControl>
 
                 <FormControl fullWidth>
-                    <InputLabel id="teamB">Second Team Playing</InputLabel>
-                    <Select
-                    labelId="teamB"
-                    value={teamB}
-                    onChange={(e) => setTeamB(e.target.value)}
-                    >
-                    {teamOptions.map((team) => (
-                        <MenuItem key={team.name} value={team.name}><img src={team.logoPath()} style={{width: "50px", height: "50px"}}/>{team.name}</MenuItem>
-                    ))}
-                    </Select>
+                    <Autocomplete
+                        options={filteredOptions}
+                        filterOptions={(x) => x}
+                        value={valueC}
+                        onChange={(_, newValue) => {
+                            if (!newValue || teamOptions.includes(newValue!)) {
+                            setValueC(newValue);
+                            sethideLogoC(false);
+                            }
+                        }}
+                        getOptionLabel={(option) => option.name}
+                        inputValue={teamB}
+                        onInputChange={(_, newTeamB) => {
+                            setTeamB(newTeamB);
+                            fuzzySearchItems(newTeamB);
+                            sethideLogoC(true);
+                        }}
+                        renderOption={(props, option) => (
+                            <MenuItem {...props} key={option.name} sx={{fontSize: "2rem"}}>
+                            <img
+                                src={option.logoPath()}
+                                alt={option.name}
+                                style={{ width: '100px', height: '100px', marginRight: 8 }}
+                            />
+                            {option.name}
+                            </MenuItem>
+                        )}
+                        renderInput={(params) => (
+                            <TextField
+                            {...params}
+                            sx={{'& .MuiInputBase-input': {
+                                fontSize: '2rem', // adjust as needed
+                            },}}
+                            label="Second Team Playing"
+                            onFocus={() => {
+                                fuzzySearchItems(teamB);
+                            }}
+                            onBlur={() => sethideLogoC(false)}
+                            InputProps={{
+                                ...params.InputProps,
+                                startAdornment: valueC && !hideLogoC ? (
+                                <Avatar
+                                    src={valueC.logoPath()}
+                                    alt={valueC.name}
+                                    sx={{ width: 100, height: 100, marginRight: 1 }}
+                                />
+                                ) : null,
+                            }}
+                            />)
+                        }
+                        freeSolo={false}
+                        />
                 </FormControl>
 
                 <Box>
