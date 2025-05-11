@@ -72,7 +72,7 @@ export function makeOriginalWeb(): Graph{
     curr_graph.addVertex(new Vertex("Miami", "ACC", "Miami Hurricanes", ["Miami (FL)", "UMiami"]));
     curr_graph.addVertex(new Vertex("Miami (OH)", "MAC", "Miami (OH) Redhawks", ["Miami OH", "M-OH"]));
     curr_graph.addVertex(new Vertex("Michigan St", "B10", "Michigan State Spartans", ["MSU"]));
-    curr_graph.addVertex(new Vertex("Michigan", "B10", "Michigan Wolverines", []));
+    curr_graph.addVertex(new Vertex("Michigan", "B10", "Michigan Wolverines", ["UMich"]));
     curr_graph.addVertex(new Vertex("Middle Tennessee", "CUSA", "Middle Tennessee Blue Raiders", ["MTSU", "Middle Tennessee State"]));
     curr_graph.addVertex(new Vertex("Minnesota", "B10", "Minnesota Golden Gophers", []));
     curr_graph.addVertex(new Vertex("Miss St", "SEC", "Mississippi State Bulldogs", ["MSST"]));

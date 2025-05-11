@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Select, MenuItem, FormControl, InputLabel, Typography, Button, Box, Autocomplete, TextField, Avatar } from "@mui/material";
 import { Vertex, Path, Graph } from '../classes/graph';
 import { makeOriginalWeb } from '../data/rivalryWeb';
+import Fuse from 'fuse.js';
 import TeamIcon from './TeamIcon';
 import CustomArrow from './customArrow';
 
@@ -13,22 +14,62 @@ const RootingChooser = () => {
       const [rootPath, setRootPath] = useState(new Path([],[]));
       const [value, setValue] = useState<Vertex | null>(null);
       const [boxAFocus, setBoxAFocus] = useState<boolean>(false);
+      
     
       const rivalryWeb: Graph = makeOriginalWeb();
     
-      const teamOptions: Vertex[] = rivalryWeb.vertices;
-      //const nameOptions: string[] = teamOptions.map((v) => v.name);
-
-      const filteredOptions = teamOptions
-            .filter(option => {
-            try {
-                const regex = new RegExp(teamFan, 'i');
-                return regex.test(option.name);
-            } catch {
-                return false; // invalid regex input
+      const teamOptions: Vertex[] = useMemo(() => {return rivalryWeb.vertices}, []);
+      const [filteredOptions, setFilteredOptions] = useState(teamOptions);
+      
+      const spellingsToItemMap: { spelling: string; team: Vertex }[] = useMemo(() =>
+        {
+            console.log("runnin");
+        const tempMap: { spelling: string; team: Vertex }[] = [];
+        for (const team of teamOptions) {
+            for (const spelling of team.spellings) {
+                tempMap.push({ spelling, team });
             }
+        }
+        return tempMap
+        }, [teamOptions]);
+        
+
+        // Setup Fuse
+        const fuse = useMemo(() => {return new Fuse(spellingsToItemMap, {
+            keys: ['spelling'],
+            threshold: 0.4,
+            includeScore: true,
+            location: 0,
+            distance: 25
             })
-            .slice(0, 5);
+        }, [spellingsToItemMap]);
+
+        // Search
+        function fuzzySearchItems(query: string, maxResults = 5): Vertex[] {
+            const results = fuse.search(query);
+          
+            const bestScores = new Map<Vertex, number>();
+          
+            for (const result of results) {
+              const vertex = result.item.team;
+              const score = result.score ?? 1;
+          
+              if (!bestScores.has(vertex) || score < bestScores.get(vertex)!) {
+                bestScores.set(vertex, score);
+              }
+            }
+            console.log(bestScores);
+            // Sort by best score
+            const sorted = Array.from(bestScores.entries())
+              .sort((a, b) => a[1] - b[1])
+              .slice(0, maxResults)
+              .map(([vertex]) => vertex);
+
+            setFilteredOptions(sorted);
+          
+            return sorted;
+        }
+
 
       function findResult(){
         const paths = rivalryWeb.Dijkstra(teamFan);
@@ -52,6 +93,7 @@ const RootingChooser = () => {
                     }
                     <Autocomplete
                         options={filteredOptions}
+                        filterOptions={(x) => x}
                         value={value}
                         onChange={(_, newValue) => {
                             if (!newValue || teamOptions.includes(newValue!)) {
@@ -62,6 +104,7 @@ const RootingChooser = () => {
                         inputValue={teamFan}
                         onInputChange={(_, newTeamFan) => {
                             setFan(newTeamFan);
+                            fuzzySearchItems(newTeamFan);
                         }}
                         renderOption={(props, option) => (
                             <MenuItem {...props} key={option.name}>
