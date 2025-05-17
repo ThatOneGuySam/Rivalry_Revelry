@@ -1,19 +1,37 @@
-const CustomArrow = () => {
-  const startX = 50;
-  const startY = 50;
-  const endX = 200;
-  const endY = 200;
+type Point = { x: number; y: number };
+
+interface CustomArrowProps {
+  from: Point;
+  to: Point;
+}
+
+const CustomArrow: React.FC<CustomArrowProps> = ({ from, to }) => {
+  const startX = from.x;
+  const startY = from.y;
+  const endX = to.x;
+  const endY = to.y;
 
   // Calculate position for the clickable point (e.g., one-third along the line)
   const clickX = startX + (endX - startX) / 3;
   const clickY = startY + (endY - startY) / 3;
+  console.log("Making arrow ", startX, ", ", startY, " to ", endX, ", ", endY);
 
   const handleClick = () => {
-    alert('Arrow point clicked!');
+    alert("Arrow point clicked!");
   };
 
   return (
-    <svg width="300" height="300">
+    <svg
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        pointerEvents: "none",
+        zIndex: 10,
+      }}
+    >
       <defs>
         <marker
           id="arrowhead"
@@ -42,7 +60,7 @@ const CustomArrow = () => {
         r="5"
         fill="red"
         onClick={handleClick}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: "pointer" }}
       />
     </svg>
   );
