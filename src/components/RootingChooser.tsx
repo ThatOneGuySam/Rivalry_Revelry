@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   MenuItem,
   FormControl,
@@ -28,6 +28,26 @@ const RootingChooser = () => {
   const [hideLogoA, sethideLogoA] = useState<boolean>(false);
   const [hideLogoB, sethideLogoB] = useState<boolean>(false);
   const [hideLogoC, sethideLogoC] = useState<boolean>(false);
+
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [cellSize, setCellSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (!gridRef.current) return;
+
+      const rect = gridRef.current.getBoundingClientRect();
+      const numCols = 2 * rootPath.vertices.length - 1; // assuming 1 column per icon
+      const width = (rect.width - 30 * (numCols - 1)) / numCols;
+      const height = (rect.height - 30 * 2) / 3; // 2 rows: top + bottom
+      setCellSize({ width, height });
+      console.log("Cell size is now ", cellSize);
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, [rootPath.vertices.length]);
 
   const rivalryWeb: Graph = makeOriginalWeb();
 
@@ -102,8 +122,23 @@ const RootingChooser = () => {
   }
 
   return (
-    <Box>
-      <div style={{ display: "flex", flexDirection: "column", gap: "5rem" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center", // ⬅ horizontally center children
+        justifyContent: "center", // ⬅ optional: vertical centering
+        width: "100vw",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "3rem",
+          width: "60%",
+        }}
+      >
         <FormControl fullWidth>
           {
             //<InputLabel id="fan-team">Your Team</InputLabel>
@@ -295,6 +330,7 @@ const RootingChooser = () => {
       {rootFor && (
         <div
           className={styles.zigzagContainer}
+          ref={gridRef}
           style={{
             gridTemplateColumns: `repeat(${
               2 * rootPath.vertices.length - 1
@@ -323,6 +359,7 @@ const RootingChooser = () => {
                         key={step.name}
                         logoPath={step.logoPath()}
                         team_name={step.logo_name}
+                        size={cellSize}
                       />
                     </Box>
                     {i !== rootPath.vertices.length - 1 && (
@@ -336,13 +373,18 @@ const RootingChooser = () => {
                       >
                         {i % 2 === 0 ? (
                           <RootPathArrow
-                            from={{ x: 10, y: 10 }}
-                            to={{ x: 110, y: 110 }}
+                            from={{ x: 0, y: 0 }}
+                            to={{
+                              x: cellSize.width,
+                              y: cellSize.height,
+                            }}
+                            parity={true}
                           />
                         ) : (
                           <RootPathArrow
-                            from={{ x: 0, y: 120 }}
-                            to={{ x: 85, y: 35 }}
+                            from={{ x: 0, y: cellSize.height }}
+                            to={{ x: cellSize.width, y: 0 }}
+                            parity={false}
                           />
                         )}
                       </Box>

@@ -1,6 +1,7 @@
 .zigzagContainer {
     position: relative;
-    width: 100%;
+    width: 80vw;
+    height: 30vw;
     margin: 0 auto;
   }
   
