@@ -6,8 +6,8 @@
   
   .iconGrid {
     display: grid;
-    row-gap: 100px;
-    column-gap: 80px;
+    row-gap: 30px;
+    column-gap: 30px;
     position: relative;
     z-index: 1;
     justify-content: center;
@@ -23,7 +23,7 @@
   }
   
   .bottomRow {
-    grid-row-start: 2;
+    grid-row-start: 3;
   }
   
   .icon {

@@ -1,11 +1,11 @@
 type Point = { x: number; y: number };
 
-interface CustomArrowProps {
+interface RootPathArrowProps {
   from: Point;
   to: Point;
 }
 
-const CustomArrow: React.FC<CustomArrowProps> = ({ from, to }) => {
+const RootPathArrow: React.FC<RootPathArrowProps> = ({ from, to }) => {
   const startX = from.x;
   const startY = from.y;
   const endX = to.x;
@@ -23,11 +23,11 @@ const CustomArrow: React.FC<CustomArrowProps> = ({ from, to }) => {
   return (
     <svg
       style={{
-        position: "absolute",
+        position: "relative",
         top: 0,
         left: 0,
-        width: "100vw",
-        height: "100vh",
+        width: "150px",
+        height: "150px",
         pointerEvents: "none",
         zIndex: 10,
       }}
@@ -66,4 +66,4 @@ const CustomArrow: React.FC<CustomArrowProps> = ({ from, to }) => {
   );
 };
 
-export default CustomArrow;
+export default RootPathArrow;

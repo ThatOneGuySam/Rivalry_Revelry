@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   MenuItem,
   FormControl,
@@ -13,7 +13,7 @@ import { Vertex, Path, Graph } from "../classes/graph";
 import { makeOriginalWeb } from "../data/rivalryWeb";
 import Fuse from "fuse.js";
 import TeamIcon from "./TeamIcon";
-import CustomArrow from "./customArrow";
+import RootPathArrow from "./customArrows";
 import styles from "../styles/zigzagFlow.module.css";
 
 const RootingChooser = () => {
@@ -22,18 +22,12 @@ const RootingChooser = () => {
   const [teamB, setTeamB] = useState("");
   const [rootFor, setRootFor] = useState("");
   const [rootPath, setRootPath] = useState(new Path([], []));
-  const [arrowPoints, setArrowPoints] = useState<{ x: number; y: number }[]>(
-    []
-  );
   const [valueA, setValueA] = useState<Vertex | null>(null);
   const [valueB, setValueB] = useState<Vertex | null>(null);
   const [valueC, setValueC] = useState<Vertex | null>(null);
   const [hideLogoA, sethideLogoA] = useState<boolean>(false);
   const [hideLogoB, sethideLogoB] = useState<boolean>(false);
   const [hideLogoC, sethideLogoC] = useState<boolean>(false);
-
-  const pathLocationRefs = useRef<(HTMLElement | null)[]>([]);
-  const iconGridRef = useRef<HTMLDivElement | null>(null);
 
   const rivalryWeb: Graph = makeOriginalWeb();
 
@@ -106,21 +100,6 @@ const RootingChooser = () => {
       return;
     }
   }
-
-  useEffect(() => {
-    const containerRect = iconGridRef.current?.getBoundingClientRect();
-
-    const positions = pathLocationRefs.current.map((el) => {
-      if (!el || !containerRect) return { x: 0, y: 0 };
-      const rect = el.getBoundingClientRect();
-      return {
-        x: rect.left - containerRect.left + rect.width / 2,
-        y: rect.top - containerRect.top + (1.5 * rect.height) / 2,
-      };
-    });
-
-    setArrowPoints(positions);
-  }, [rootPath]);
 
   return (
     <Box>
@@ -317,59 +296,61 @@ const RootingChooser = () => {
         <div
           className={styles.zigzagContainer}
           style={{
-            gridTemplateColumns: `repeat(${rootPath.vertices.length}, 1fr)`,
+            gridTemplateColumns: `repeat(${
+              2 * rootPath.vertices.length - 1
+            }, 1fr)`,
           }}
         >
           <Typography variant="h3">
             You should be rooting for {rootFor} due to the following rivalries
           </Typography>
-          <div className={styles.iconGrid} ref={iconGridRef}>
+          <div className={styles.iconGrid}>
             {rootPath &&
               rootPath.vertices.map((step, i) => {
-                const row = (i + 1) % 2;
-                const col = i + 1;
+                const row = 2 * (i % 2) + 1;
+                const col = 2 * i + 1;
                 return (
-                  <Box
-                    key={i}
-                    ref={(el) =>
-                      (pathLocationRefs.current[i] = el as HTMLElement | null)
-                    }
-                    className={`${styles.iconWrapper} ${
-                      i % 2 === 0 ? styles.topRow : styles.bottomRow
-                    }`}
-                    style={{
-                      gridRow: row,
-                      gridColumn: col,
-                    }}
-                  >
-                    <TeamIcon
-                      key={step.name}
-                      logoPath={step.logoPath()}
-                      team_name={step.logo_name}
-                    />
-                  </Box>
+                  <>
+                    <Box
+                      key={`Icon_${i}`}
+                      className={`${styles.iconWrapper}`}
+                      style={{
+                        gridRow: row,
+                        gridColumn: col,
+                      }}
+                    >
+                      <TeamIcon
+                        key={step.name}
+                        logoPath={step.logoPath()}
+                        team_name={step.logo_name}
+                      />
+                    </Box>
+                    {i !== rootPath.vertices.length - 1 && (
+                      <Box
+                        key={`Arrow_${i}`}
+                        className={`${styles.iconWrapper}`}
+                        style={{
+                          gridRow: 2,
+                          gridColumn: 2 * (i + 1),
+                        }}
+                      >
+                        {i % 2 === 0 ? (
+                          <RootPathArrow
+                            from={{ x: 10, y: 10 }}
+                            to={{ x: 110, y: 110 }}
+                          />
+                        ) : (
+                          <RootPathArrow
+                            from={{ x: 0, y: 120 }}
+                            to={{ x: 85, y: 35 }}
+                          />
+                        )}
+                      </Box>
+                    )}
+                  </>
                 );
               })}
           </div>
-          {rootPath && (
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                pointerEvents: "none",
-                zIndex: 5,
-              }}
-            >
-              {arrowPoints.slice(0, -1).map((from, i) => {
-                const to = arrowPoints[i + 1];
-                console.log(from, to);
-                return <CustomArrow key={i} from={from} to={to} />;
-              })}
-            </div>
-          )}
         </div>
       )}
     </Box>
