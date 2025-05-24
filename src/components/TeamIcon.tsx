@@ -10,7 +10,13 @@ const TeamIcon: React.FC<Props> = ({ logoPath, team_name, size }) => {
     <Box>
       <img src={logoPath} style={{ width: minSize, height: minSize }} />
       <br></br>
-      <Typography variant="h5">{team_name}</Typography>
+      <Typography
+        sx={{
+          fontSize: "clamp(1rem, 1.5vw, 2rem)", // ⬅ scales between 1rem and 3rem based on viewport width
+        }}
+      >
+        {team_name}
+      </Typography>
     </Box>
   );
 };
