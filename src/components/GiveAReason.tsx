@@ -13,18 +13,18 @@ import { makeOriginalWeb } from "../data/rivalryWeb";
 import Fuse from "fuse.js";
 import RootPathGrid from "./RootPathGrid";
 
-const RootingChooser = () => {
+const GiveAReason = () => {
   const [teamFan, setFan] = useState("");
-  const [teamA, setTeamA] = useState("");
-  const [teamB, setTeamB] = useState("");
-  const [rootFor, setRootFor] = useState("");
+  const [targetTeam, setTargetTeam] = useState("");
+  const [targetString, setTargetString] = useState("");
+  const opinionOptions: string[] = ["care about", "root for", "root against"];
+  const [opinion, setOpinion] = useState("care about");
+  const [providedPos, setProvidedPos] = useState(true);
   const [rootPath, setRootPath] = useState(new Path([], []));
   const [valueA, setValueA] = useState<Vertex | null>(null);
   const [valueB, setValueB] = useState<Vertex | null>(null);
-  const [valueC, setValueC] = useState<Vertex | null>(null);
   const [hideLogoA, sethideLogoA] = useState<boolean>(false);
   const [hideLogoB, sethideLogoB] = useState<boolean>(false);
-  const [hideLogoC, sethideLogoC] = useState<boolean>(false);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [cellSize, setCellSize] = useState({ width: 0, height: 0 });
@@ -55,7 +55,6 @@ const RootingChooser = () => {
 
   const spellingsToItemMap: { spelling: string; team: Vertex }[] =
     useMemo(() => {
-      console.log("runnin");
       const tempMap: { spelling: string; team: Vertex }[] = [];
       for (const team of teamOptions) {
         for (const spelling of team.spellings) {
@@ -106,14 +105,19 @@ const RootingChooser = () => {
   }
 
   function findResult() {
-    const paths = rivalryWeb.Dijkstra(teamFan);
-    if (paths.get(teamA)!.weight < paths.get(teamB)!.weight) {
-      setRootFor(paths.get(teamA)!.evenParity() ? teamA : teamB);
-      setRootPath(paths.get(teamA)!);
+    const paths = rivalryWeb.DijkstraParity(teamFan);
+    setTargetString(targetTeam);
+    if (
+      opinion === "root for" ||
+      (opinion === "care about" &&
+        paths.even.get(targetTeam)!.weight <= paths.odd.get(targetTeam)!.weight)
+    ) {
+      setRootPath(paths.even.get(targetTeam)!);
+      setProvidedPos(true);
       return;
     } else {
-      setRootFor(paths.get(teamB)!.evenParity() ? teamB : teamA);
-      setRootPath(paths.get(teamB)!);
+      setRootPath(paths.odd.get(targetTeam)!);
+      setProvidedPos(false);
       return;
     }
   }
@@ -137,10 +141,6 @@ const RootingChooser = () => {
         }}
       >
         <FormControl fullWidth>
-          {
-            //<InputLabel id="fan-team">Your Team</InputLabel>
-            //Note in case I forget: function parameter I'm leaving blank is event
-          }
           <Autocomplete
             options={filteredOptions}
             filterOptions={(x) => x}
@@ -197,12 +197,24 @@ const RootingChooser = () => {
             freeSolo={false}
           />
         </FormControl>
+        <FormControl>
+          <TextField
+            select
+            fullWidth
+            label="Stance"
+            value={opinion}
+            onChange={(e) => setOpinion(e.target.value)}
+            variant="outlined"
+          >
+            {opinionOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </TextField>
+        </FormControl>
 
         <FormControl fullWidth>
-          {
-            //<InputLabel id="fan-team">Your Team</InputLabel>
-            //Note in case I forget: function parameter I'm leaving blank is event
-          }
           <Autocomplete
             options={filteredOptions}
             filterOptions={(x) => x}
@@ -214,10 +226,10 @@ const RootingChooser = () => {
               }
             }}
             getOptionLabel={(option) => option.name}
-            inputValue={teamA}
-            onInputChange={(_, newTeamA) => {
-              setTeamA(newTeamA);
-              fuzzySearchItems(newTeamA);
+            inputValue={targetTeam}
+            onInputChange={(_, newTargetTeam) => {
+              setTargetTeam(newTargetTeam);
+              fuzzySearchItems(newTargetTeam);
               sethideLogoB(true);
             }}
             renderOption={(props, option) => (
@@ -240,7 +252,7 @@ const RootingChooser = () => {
                 }}
                 label="First Team Playing"
                 onFocus={() => {
-                  fuzzySearchItems(teamA);
+                  fuzzySearchItems(targetTeam);
                 }}
                 onBlur={() => sethideLogoB(false)}
                 InputProps={{
@@ -260,75 +272,21 @@ const RootingChooser = () => {
           />
         </FormControl>
 
-        <FormControl fullWidth>
-          <Autocomplete
-            options={filteredOptions}
-            filterOptions={(x) => x}
-            value={valueC}
-            onChange={(_, newValue) => {
-              if (!newValue || teamOptions.includes(newValue!)) {
-                setValueC(newValue);
-                sethideLogoC(false);
-              }
-            }}
-            getOptionLabel={(option) => option.name}
-            inputValue={teamB}
-            onInputChange={(_, newTeamB) => {
-              setTeamB(newTeamB);
-              fuzzySearchItems(newTeamB);
-              sethideLogoC(true);
-            }}
-            renderOption={(props, option) => (
-              <MenuItem {...props} key={option.name} sx={{ fontSize: "2rem" }}>
-                <img
-                  src={option.logoPath()}
-                  alt={option.name}
-                  style={{ width: "100px", height: "100px", marginRight: 8 }}
-                />
-                {option.name}
-              </MenuItem>
-            )}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                sx={{
-                  "& .MuiInputBase-input": {
-                    fontSize: "2rem", // adjust as needed
-                  },
-                }}
-                label="Second Team Playing"
-                onFocus={() => {
-                  fuzzySearchItems(teamB);
-                }}
-                onBlur={() => sethideLogoC(false)}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment:
-                    valueC && !hideLogoC ? (
-                      <Avatar
-                        src={valueC.logoPath()}
-                        alt={valueC.name}
-                        sx={{ width: 100, height: 100, marginRight: 1 }}
-                      />
-                    ) : null,
-                }}
-              />
-            )}
-            freeSolo={false}
-          />
-        </FormControl>
-
         <Box>
           <Button variant="contained" color="primary" onClick={findResult}>
             Submit Selection
           </Button>
         </Box>
       </div>
-      {rootFor && (
-        <RootPathGrid rootFor={rootFor} rootPath={rootPath} support={true} />
+      {targetString && (
+        <RootPathGrid
+          rootFor={targetString}
+          rootPath={rootPath}
+          support={providedPos}
+        />
       )}
     </Box>
   );
 };
 
-export default RootingChooser;
+export default GiveAReason;

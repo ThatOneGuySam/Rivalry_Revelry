@@ -8,9 +8,14 @@ import styles from "../styles/zigzagFlow.module.css";
 interface RootPathProps {
   rootPath: Path;
   rootFor: string;
+  support: boolean;
 }
 
-const RootPathGrid: React.FC<RootPathProps> = ({ rootPath, rootFor }) => {
+const RootPathGrid: React.FC<RootPathProps> = ({
+  rootPath,
+  rootFor,
+  support,
+}) => {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [cellSize, setCellSize] = useState({ width: 0, height: 0 });
 
@@ -41,7 +46,8 @@ const RootPathGrid: React.FC<RootPathProps> = ({ rootPath, rootFor }) => {
       }}
     >
       <Typography variant="h3">
-        You should be rooting for {rootFor} due to the following rivalries
+        You should be rooting {support ? "for" : "against"} {rootFor} due to the
+        following rivalries
       </Typography>
       <div className={styles.iconGrid}>
         {rootPath &&

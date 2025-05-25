@@ -7,6 +7,10 @@ function calculateWeight(strength: number): number{
   
     return lower + (upper - lower) / (1 + Math.exp(k * (strength - x0)));
   }
+export type parityPath = {
+    even: Map<string, Path>;
+    odd: Map<string, Path>;
+}
 
 export class Vertex{
     conference: string;
@@ -232,7 +236,7 @@ export class Graph{
         return pathSet;
     }
 
-    DijkstraParity(source: string): Object{
+    DijkstraParity(source: string): parityPath{
         const evenPathSet = new Map<string, Path>();
         const oddPathSet = new Map<string, Path>();
         const evenVisited = new Set<Vertex>();
@@ -244,12 +248,10 @@ export class Graph{
         const sourceVertex = this.findVertex(source);
         if(!sourceVertex){
             console.error("Search on non-existent vertex");
-            return {};
+            return {"even": new Map<string, Path>(), "odd": new Map<string, Path>()};
         }
-
         evenPathSet.set(source, new Path([sourceVertex],[]));
-        oddPriorityQueue.push([sourceVertex, 0]);
-
+        evenPriorityQueue.push([sourceVertex, 0]);
         while (evenPriorityQueue.length > 0 || oddPriorityQueue.length > 0) {
             evenPriorityQueue.sort((a, b) => a[1] - b[1]);
             oddPriorityQueue.sort((a,b) => a[1] - b[1]);
