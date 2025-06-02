@@ -3,6 +3,7 @@ import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
 import "./App.css";
 import RootingChooser from "./components/RootingChooser";
 import GiveAReason from "./components/GiveAReason";
+import WebVisualizer from "./components/webVisualizer";
 
 function App() {
   const [tabIndex, setTabIndex] = useState(1);
@@ -14,7 +15,7 @@ function App() {
   const renderContent = () => {
     switch (tabIndex) {
       case 0:
-        return <RootingChooser />;
+        return <WebVisualizer />;
       case 1:
         return <RootingChooser />;
       case 2:

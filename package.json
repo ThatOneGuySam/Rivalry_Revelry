@@ -14,8 +14,11 @@
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^7.1.0",
     "fuse.js": "^7.1.0",
+    "graphology": "^0.26.0",
+    "graphology-gexf": "^0.13.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "sigma": "^3.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

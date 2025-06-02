@@ -12,6 +12,12 @@ export type parityPath = {
     odd: Map<string, Path>;
 }
 
+export type advancedSettings = {
+    NO_CONFERENCE_ALLIES: boolean;
+    NO_LOOPS: boolean;
+    NO_RIVALS_AS_ALLIES: boolean;
+}
+
 export class Vertex{
     conference: string;
     name: string;
