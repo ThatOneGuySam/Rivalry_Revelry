@@ -5,6 +5,31 @@ import { useEffect, useRef } from "react";
 import { Box, Typography } from "@mui/material";
 
 const WebVisualizer: React.FC = () => {
+  type StringToStringDictionary = {
+    [key: string]: string;
+  };
+  const colorByConference: StringToStringDictionary = {
+    SEC: "red",
+    B10: "blue",
+    B12: "green",
+    ACC: "purple",
+    MW: "yellow",
+    Sunbelt: "orange",
+    MAC: "olive",
+    PAC2: "pink",
+    Ind: "gray",
+    CUSA: "teal",
+    AAC: "black",
+  };
+
+  function getColor(conf: string) {
+    try {
+      const c = colorByConference[conf];
+      return c;
+    } catch (error) {
+      return "white";
+    }
+  }
   const containerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let renderer: Sigma | null = null;
@@ -12,13 +37,14 @@ const WebVisualizer: React.FC = () => {
     const rivalryWeb = new Graph();
     const givenWeb = makeOriginalWeb();
     let index = 0;
-    for (const node of givenWeb.vertices.map((v) => v.name)) {
-      rivalryWeb.addNode(node, {
-        x: (index % 1000) - 500,
-        y: index / 1000,
-        label: node,
+    for (const node of givenWeb.vertices.map((v) => [v.name, v.conference])) {
+      rivalryWeb.addNode(node[0], {
+        x: (index % 120) - 60,
+        y: index / 120,
+        label: node[0],
+        color: getColor(node[1]),
       });
-      index += 100;
+      index += 10;
     }
     console.log(rivalryWeb);
     for (const edge of givenWeb.edges.map((e) => [
