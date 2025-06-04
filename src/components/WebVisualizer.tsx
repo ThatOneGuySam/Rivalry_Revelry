@@ -39,12 +39,13 @@ const WebVisualizer: React.FC = () => {
     let index = 0;
     for (const node of givenWeb.vertices.map((v) => [v.name, v.conference])) {
       rivalryWeb.addNode(node[0], {
-        x: (index % 120) - 60,
-        y: index / 120,
+        x: index % 12,
+        y: index / 12,
         label: node[0],
         color: getColor(node[1]),
+        size: 7.5,
       });
-      index += 10;
+      index += 1;
     }
     console.log(rivalryWeb);
     for (const edge of givenWeb.edges.map((e) => [
@@ -107,8 +108,8 @@ const WebVisualizer: React.FC = () => {
     <Box>
       <Box
         sx={{
-          width: "3vw",
-          height: "2vh",
+          width: "5vw",
+          height: "4vh",
           border: "2px dashed green",
           backgroundColor: "yellow",
         }}
@@ -118,8 +119,8 @@ const WebVisualizer: React.FC = () => {
       </Box>
       <Box
         sx={{
-          width: "3vw",
-          height: "2vh",
+          width: "5vw",
+          height: "4vh",
           border: "2px dashed green",
           backgroundColor: "yellow",
         }}
@@ -129,8 +130,8 @@ const WebVisualizer: React.FC = () => {
       </Box>
       <Box
         sx={{
-          width: "3vw",
-          height: "2vh",
+          width: "5vw",
+          height: "4vh",
           border: "2px dashed green",
           backgroundColor: "yellow",
         }}
@@ -140,8 +141,8 @@ const WebVisualizer: React.FC = () => {
       </Box>
       <Box
         sx={{
-          width: "3vw",
-          height: "2vh",
+          width: "5vw",
+          height: "4vh",
           border: "2px dashed green",
           backgroundColor: "yellow",
         }}
@@ -151,7 +152,12 @@ const WebVisualizer: React.FC = () => {
       </Box>
       <div
         ref={containerRef}
-        style={{ width: "100%", height: "600px", border: "1px solid black" }}
+        style={{
+          width: "100%",
+          height: "600px",
+          textAlign: "left",
+          border: "1px solid black",
+        }}
       />
     </Box>
   );

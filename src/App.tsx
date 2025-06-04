@@ -58,7 +58,7 @@ function App() {
           flexGrow: 1,
           width: "90vw", // 90% of viewport width
           margin: "0 auto", // Center horizontally
-          overflowY: "auto",
+          overflowY: "visible",
           paddingY: 4,
         }}
       >
