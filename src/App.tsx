@@ -3,7 +3,7 @@ import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
 import "./App.css";
 import RootingChooser from "./components/RootingChooser";
 import GiveAReason from "./components/GiveAReason";
-import WebVisualizer from "./components/webVisualizer";
+import WebVisualizer from "./components/WebVisualizer";
 
 function App() {
   const [tabIndex, setTabIndex] = useState(1);
