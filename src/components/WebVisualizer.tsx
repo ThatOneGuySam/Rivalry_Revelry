@@ -3,7 +3,7 @@ import Sigma from "sigma";
 import { makeOriginalWeb } from "../data/rivalryWeb";
 import { useEffect, useRef } from "react";
 import { Box, Typography } from "@mui/material";
-import { Vertex, Path } from "../classes/graph";
+import { Path } from "../classes/graph";
 
 const WebVisualizer: React.FC = () => {
   type StringToStringDictionary = {
@@ -30,6 +30,30 @@ const WebVisualizer: React.FC = () => {
     } catch (error) {
       return "white";
     }
+  }
+
+  function partitionBands(
+    arr: [string, Path][]
+  ): [Map<number, [string, Path][]>, Map<string, [string, Path][]>] {
+    const bandPartitions = new Map<number, [string, Path][]>();
+    const lastStepPartitions = new Map<string, [string, Path][]>();
+    for (const item of arr) {
+      const step = item[1].steps;
+      if (!bandPartitions.has(step)) {
+        bandPartitions.set(step, []);
+      }
+      bandPartitions.get(step)!.push(item);
+      const source = item[1].lastStep();
+      if (source) {
+        //I know, I know, nested loops are bad form
+        if (!lastStepPartitions.has(source.name)) {
+          lastStepPartitions.set(source.name, []);
+        }
+        lastStepPartitions.get(source.name)!.push(item);
+      }
+    }
+
+    return [bandPartitions, lastStepPartitions];
   }
 
   function trapezoid(): Graph {
@@ -65,30 +89,44 @@ const WebVisualizer: React.FC = () => {
     const givenWeb = makeOriginalWeb();
     const pathSet: Map<string, Path> = givenWeb.Dijkstra(teamName);
     const pathSetArray = Array.from(pathSet);
-    pathSetArray.sort((a, b) => {
-      return a[1].steps - b[1].steps;
+    const [bands, sourceSet] = partitionBands(pathSetArray);
+    const maxStep = Math.max(...pathSetArray.map((obj) => obj[1].steps));
+    const teamsCurrentDirection: Map<string, number> = new Map<
+      string,
+      number
+    >();
+    const childrenTraversed: Map<string, number> = new Map<string, number>();
+    initialRivalryWeb.addNode(teamName, {
+      x: 0,
+      y: 0,
+      label: teamName,
+      color: getColor(givenWeb.findVertex(teamName)!.conference),
+      size: 10,
     });
-    for (const [name, path] of pathSetArray) {
-      if (name === teamName) {
-        initialRivalryWeb.addNode(name, {
-          x: 0,
-          y: 0,
-          label: name,
-          color: getColor(givenWeb.findVertex(name)!.conference),
-          size: 10,
-        });
-      } else {
+    teamsCurrentDirection.set(teamName, 0);
+    childrenTraversed.set(teamName, 0);
+    for (let currBand = 2; currBand <= maxStep; currBand++) {
+      const numInBand = bands.get(currBand)!.length;
+      console.log(numInBand);
+      for (const [name, path] of bands.get(currBand)!) {
         try {
-          const lastStep: Vertex = path.lastStep()!;
-          const direction = Math.random() * 2 * Math.PI;
-          const lastStepX = initialRivalryWeb.getNodeAttributes(
-            lastStep.name
-          ).x;
-          const lastStepY = initialRivalryWeb.getNodeAttributes(
-            lastStep.name
-          ).y;
-          const currentX = lastStepX + path.lastWeight() * Math.cos(direction);
-          const currentY = lastStepY + path.lastWeight() * Math.sin(direction);
+          const sourceNode = path.lastStep()!.name;
+          if (!childrenTraversed.get(sourceNode)) {
+            childrenTraversed.set(sourceNode, 0);
+          }
+          const sourceField = sourceSet.get(sourceNode)!.length;
+          const percentageOfField = sourceField / numInBand;
+          const leftmostTick =
+            teamsCurrentDirection.get(sourceNode)! - 0.5 * percentageOfField;
+          const shift =
+            0.5 * (percentageOfField / sourceField) +
+            (percentageOfField / sourceField) *
+              childrenTraversed.get(sourceNode)!;
+          const pastX = initialRivalryWeb.getNodeAttributes(sourceNode).x;
+          const pastY = initialRivalryWeb.getNodeAttributes(sourceNode).y;
+          const direction = Math.PI * 2 * (leftmostTick + shift);
+          const currentX = pastX + path.lastWeight() * Math.cos(direction);
+          const currentY = pastY + path.lastWeight() * Math.sin(direction);
           initialRivalryWeb.addNode(name, {
             x: currentX,
             y: currentY,
@@ -96,32 +134,26 @@ const WebVisualizer: React.FC = () => {
             color: getColor(givenWeb.findVertex(name)!.conference),
             size: 10,
           });
-          initialRivalryWeb.addDirectedEdge(lastStep.name, name);
+          initialRivalryWeb.addDirectedEdge(sourceNode, name);
+          teamsCurrentDirection.set(name, leftmostTick + shift);
+          childrenTraversed.set(
+            sourceNode,
+            childrenTraversed.get(sourceNode)! + 1
+          );
         } catch (error) {
           console.log(error);
-          console.log(name, path);
+          console.log(name);
+          break;
         }
       }
     }
-    /*
-    for (const edge of givenWeb.edges.map((e) => [
-      e.source.name,
-      e.dest.name,
-    ])) {
-      try {
-        initialRivalryWeb.addDirectedEdge(edge[0], edge[1]);
-      } catch (error) {
-        console.log(edge, error);
-      }
-    }
-      */
     return initialRivalryWeb;
   }
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let renderer: Sigma | null = null;
-    const rivalryWeb = initialPositionTeamCentered("Florida");
+    const rivalryWeb = initialPositionTeamCentered("Notre Dame");
     console.log(rivalryWeb.export());
     console.log(trapezoid().export());
     // Retrieve some useful DOM elements:
