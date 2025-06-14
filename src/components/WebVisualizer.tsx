@@ -3,6 +3,7 @@ import Sigma from "sigma";
 import { makeOriginalWeb } from "../data/rivalryWeb";
 import { useEffect, useRef } from "react";
 import { Box, Typography } from "@mui/material";
+import { Vertex, Path } from "../classes/graph";
 
 const WebVisualizer: React.FC = () => {
   type StringToStringDictionary = {
@@ -30,10 +31,8 @@ const WebVisualizer: React.FC = () => {
       return "white";
     }
   }
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    let renderer: Sigma | null = null;
 
+  function trapezoid(): Graph {
     const rivalryWeb = new Graph();
     const givenWeb = makeOriginalWeb();
     let index = 0;
@@ -58,7 +57,73 @@ const WebVisualizer: React.FC = () => {
         console.log(edge, error);
       }
     }
+    return rivalryWeb;
+  }
+
+  function initialPositionTeamCentered(teamName: string): Graph {
+    const initialRivalryWeb = new Graph();
+    const givenWeb = makeOriginalWeb();
+    const pathSet: Map<string, Path> = givenWeb.Dijkstra(teamName);
+    const pathSetArray = Array.from(pathSet);
+    pathSetArray.sort((a, b) => {
+      return a[1].steps - b[1].steps;
+    });
+    for (const [name, path] of pathSetArray) {
+      if (name === teamName) {
+        initialRivalryWeb.addNode(name, {
+          x: 0,
+          y: 0,
+          label: name,
+          color: getColor(givenWeb.findVertex(name)!.conference),
+          size: 10,
+        });
+      } else {
+        try {
+          const lastStep: Vertex = path.lastStep()!;
+          const direction = Math.random() * 2 * Math.PI;
+          const lastStepX = initialRivalryWeb.getNodeAttributes(
+            lastStep.name
+          ).x;
+          const lastStepY = initialRivalryWeb.getNodeAttributes(
+            lastStep.name
+          ).y;
+          const currentX = lastStepX + path.lastWeight() * Math.cos(direction);
+          const currentY = lastStepY + path.lastWeight() * Math.sin(direction);
+          initialRivalryWeb.addNode(name, {
+            x: currentX,
+            y: currentY,
+            label: name,
+            color: getColor(givenWeb.findVertex(name)!.conference),
+            size: 10,
+          });
+          initialRivalryWeb.addDirectedEdge(lastStep.name, name);
+        } catch (error) {
+          console.log(error);
+          console.log(name, path);
+        }
+      }
+    }
+    /*
+    for (const edge of givenWeb.edges.map((e) => [
+      e.source.name,
+      e.dest.name,
+    ])) {
+      try {
+        initialRivalryWeb.addDirectedEdge(edge[0], edge[1]);
+      } catch (error) {
+        console.log(edge, error);
+      }
+    }
+      */
+    return initialRivalryWeb;
+  }
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    let renderer: Sigma | null = null;
+    const rivalryWeb = initialPositionTeamCentered("Florida");
     console.log(rivalryWeb.export());
+    console.log(trapezoid().export());
     // Retrieve some useful DOM elements:
     const zoomInBtn = document.getElementById("zoom-in") as HTMLButtonElement;
     const zoomOutBtn = document.getElementById("zoom-out") as HTMLButtonElement;

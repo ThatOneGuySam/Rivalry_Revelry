@@ -124,6 +124,22 @@ export class Path{
         return currString;
     }
 
+    lastStep(): Vertex | undefined{
+        if(this.vertices.length < 2){
+            return;
+        }else{
+            return this.vertices[this.vertices.length-2];
+        }
+    }
+
+    lastWeight(): number{
+        if (this.edges.length < 1){
+            return 0;
+        }else{
+            return this.edges[this.edges.length-1].weight;
+        }
+    }
+
 }
 
 export class Graph{
