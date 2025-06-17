@@ -12,6 +12,13 @@ export type parityPath = {
     odd: Map<string, Path>;
 }
 
+export type recursingStep = {
+    totalChildren: number;
+    directChildren: string[];
+    parent: string;
+    length: number;
+}
+
 export type advancedSettings = {
     NO_CONFERENCE_ALLIES: boolean;
     NO_LOOPS: boolean;
@@ -319,6 +326,25 @@ export class Graph{
           }
 
         return {"even": evenPathSet, "odd": oddPathSet};
+    }
+
+    WebRecursionDijkstra(source: string): Map<string, recursingStep>{
+        const dijkMap = this.Dijkstra(source);
+        const result = new Map<string, recursingStep>();
+        for(const [name, _] of dijkMap){
+            result.set(name, {totalChildren: -1, directChildren: [], parent: "", length: 0});
+        }
+        for(const [name, path] of dijkMap){
+            result.get(name)!.length = path.weight;
+            for(const v of path.vertices){
+                result.get(v.name)!.totalChildren += 1;
+            }
+            if(path.lastStep()){
+                result.get(path.lastStep()!.name)!.directChildren.push(name);
+                result.get(name)!.parent = path.lastStep()!.name;
+            }
+        }
+        return result;
     }
 
 }
