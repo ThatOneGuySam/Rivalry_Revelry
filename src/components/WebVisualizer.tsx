@@ -3,7 +3,7 @@ import Sigma from "sigma";
 import { makeOriginalWeb } from "../data/rivalryWeb";
 import { useEffect, useRef } from "react";
 import { Box, Typography } from "@mui/material";
-import { Path, recursingStep } from "../classes/graph";
+import { recursingStep } from "../classes/graph";
 
 const WebVisualizer: React.FC = () => {
   type StringToStringDictionary = {
@@ -32,95 +32,6 @@ const WebVisualizer: React.FC = () => {
     }
   }
 
-  function partitionBands(
-    arr: [string, Path][]
-  ): [Map<number, [string, Path][]>, Map<string, [string, Path][]>] {
-    const bandPartitions = new Map<number, [string, Path][]>();
-    const lastStepPartitions = new Map<string, [string, Path][]>();
-    for (const item of arr) {
-      const step = item[1].steps;
-      if (!bandPartitions.has(step)) {
-        bandPartitions.set(step, []);
-      }
-      bandPartitions.get(step)!.push(item);
-      const source = item[1].lastStep();
-      if (source) {
-        //I know, I know, nested loops are bad form
-        if (!lastStepPartitions.has(source.name)) {
-          lastStepPartitions.set(source.name, []);
-        }
-        lastStepPartitions.get(source.name)!.push(item);
-      }
-    }
-
-    return [bandPartitions, lastStepPartitions];
-  }
-
-  function findClosestPointOnRayTowardA(
-    pastX: number,
-    pastY: number,
-    theta: number, // in radians
-    d: number
-  ): [number, number] {
-    const dx = Math.cos(theta);
-    const dy = Math.sin(theta);
-
-    // Circle center: A, radius: d
-    // Ray: P(t) = (t*dx, t*dy)
-
-    const a = 1; // dx^2 + dy^2 = 1 since unit direction
-    const b = -2 * (pastX * dx + pastY * dy); // projection
-    const c = pastX * pastX + pastY * pastY - d * d;
-
-    const discriminant = b * b - 4 * a * c;
-
-    let t: number;
-
-    if (discriminant >= 0) {
-      const sqrtDisc = Math.sqrt(discriminant);
-      const t1 = (-b + sqrtDisc) / 2;
-      const t2 = (-b - sqrtDisc) / 2;
-
-      // Choose the furthest valid solution (t ≥ 0)
-      const candidates = [t1, t2].filter((t) => t >= 0);
-      t = candidates.length > 0 ? Math.max(...candidates) : 0;
-    } else {
-      // No real solution — project A onto the ray
-      const dot = pastX * dx + pastY * dy;
-      t = Math.max(0, dot); // clamp to ray (non-negative t)
-    }
-
-    return [t * dx, t * dy];
-  }
-
-  function trapezoid(): Graph {
-    const rivalryWeb = new Graph();
-    const givenWeb = makeOriginalWeb();
-    let index = 0;
-    for (const node of givenWeb.vertices.map((v) => [v.name, v.conference])) {
-      rivalryWeb.addNode(node[0], {
-        x: index % 12,
-        y: index / 12,
-        label: node[0],
-        color: getColor(node[1]),
-        size: 7.5,
-      });
-      index += 1;
-    }
-    console.log(rivalryWeb);
-    for (const edge of givenWeb.edges.map((e) => [
-      e.source.name,
-      e.dest.name,
-    ])) {
-      try {
-        rivalryWeb.addDirectedEdge(edge[0], edge[1]);
-      } catch (error) {
-        console.log(edge, error);
-      }
-    }
-    return rivalryWeb;
-  }
-
   function canyonSort(sortKey: Map<string, recursingStep>, values: string[]) {
     const newValues: string[] = [];
     const sortedValues = [...values].sort(
@@ -136,36 +47,30 @@ const WebVisualizer: React.FC = () => {
     return newValues;
   }
 
-  function getSoftPercentage(
-    recursiveKey: Map<string, recursingStep>,
-    parent: string,
-    target: string
-  ) {
-    let percentages: Record<string, number> = {};
-    for (const t of recursiveKey.get(parent)!.directChildren) {
-      percentages[t] = recursiveKey.get(t)!.totalChildren + 1;
-    }
-    const poweredEntries = Object.entries(percentages).map(
-      ([key, val]) => [key, Math.pow(val, 0.3)] as const
-    );
-    const total = poweredEntries.reduce((sum, [, val]) => sum + val, 0);
-    return Object.fromEntries(poweredEntries)[target] / total;
-  }
-
-  function initialPositionTeamCentered(teamName: string): Graph {
-    const initialRivalryWeb = new Graph();
+  function positionTeamCentered(
+    teamName: string,
+    initiating: boolean,
+    curr_graph: Graph
+  ): Graph {
     const givenWeb = makeOriginalWeb();
     const recursivePathSet: Map<string, recursingStep> =
       givenWeb.WebRecursionDijkstra(teamName);
     const teamsDials = new Map<string, [number, number, number]>();
     //deal with initial node first
-    initialRivalryWeb.addNode(teamName, {
-      x: 0,
-      y: 0,
-      label: teamName,
-      color: getColor(givenWeb.findVertex(teamName)!.conference),
-      size: 10,
-    });
+    if (initiating) {
+      curr_graph.addNode(teamName, {
+        x: 0,
+        y: 0,
+        label: teamName,
+        color: getColor(givenWeb.findVertex(teamName)!.conference),
+        size: 10,
+      });
+    } else {
+      curr_graph.clearEdges();
+      curr_graph.setNodeAttribute(teamName, "x", 0);
+      curr_graph.setNodeAttribute(teamName, "y", 0);
+    }
+
     teamsDials.set(teamName, [-1 * Math.PI, -1 * Math.PI, Math.PI]);
     const teamQueue: string[] = canyonSort(
       recursivePathSet,
@@ -176,11 +81,7 @@ const WebVisualizer: React.FC = () => {
       const currInfo: recursingStep = recursivePathSet.get(currNode)!;
       //Find its field
       const ticks = teamsDials.get(currInfo.parent)!;
-      const percentageOfParent = getSoftPercentage(
-        recursivePathSet,
-        currInfo.parent,
-        currNode
-      );
+      const percentageOfParent = currInfo.percentage;
       console.log(percentageOfParent);
       const leftTick = ticks[1];
       const rightTick = ticks[1] + (ticks[2] - ticks[0]) * percentageOfParent;
@@ -203,96 +104,29 @@ const WebVisualizer: React.FC = () => {
         midTick / (Math.PI * 2),
         rightTick / (Math.PI * 2)
       );
-      initialRivalryWeb.addNode(currNode, {
-        x: currentX,
-        y: currentY,
-        label: currNode,
-        color: getColor(givenWeb.findVertex(currNode)!.conference),
-        size: 10,
-      });
-      initialRivalryWeb.addDirectedEdge(currInfo.parent, currNode);
+      if (initiating) {
+        curr_graph.addNode(currNode, {
+          x: currentX,
+          y: currentY,
+          label: currNode,
+          color: getColor(givenWeb.findVertex(currNode)!.conference),
+          size: 10,
+        });
+      } else {
+        curr_graph.setNodeAttribute(currNode, "x", currentX);
+        curr_graph.setNodeAttribute(currNode, "y", currentY);
+      }
+      curr_graph.addDirectedEdge(currInfo.parent, currNode);
       //Add it's children to queue
       teamQueue.push(...canyonSort(recursivePathSet, currInfo.directChildren));
     }
-    return initialRivalryWeb;
-  }
-
-  function initialPositionTeamCenteredB(teamName: string): Graph {
-    const initialRivalryWeb = new Graph();
-    const givenWeb = makeOriginalWeb();
-    const pathSet: Map<string, Path> = givenWeb.Dijkstra(teamName);
-    const pathSetArray = Array.from(pathSet);
-    const [bands, sourceSet] = partitionBands(pathSetArray);
-    const maxStep = Math.max(...pathSetArray.map((obj) => obj[1].steps));
-    const teamsCurrentDirection: Map<string, number> = new Map<
-      string,
-      number
-    >();
-    const childrenTraversed: Map<string, number> = new Map<string, number>();
-    initialRivalryWeb.addNode(teamName, {
-      x: 0,
-      y: 0,
-      label: teamName,
-      color: getColor(givenWeb.findVertex(teamName)!.conference),
-      size: 10,
-    });
-    teamsCurrentDirection.set(teamName, 0);
-    childrenTraversed.set(teamName, 0);
-    for (let currBand = 2; currBand <= maxStep; currBand++) {
-      const numInBand = bands.get(currBand)!.length;
-      console.log(numInBand);
-      for (const [name, path] of bands.get(currBand)!) {
-        try {
-          const sourceNode = path.lastStep()!.name;
-          if (!childrenTraversed.get(sourceNode)) {
-            childrenTraversed.set(sourceNode, 0);
-          }
-          const sourceField = sourceSet.get(sourceNode)!.length;
-          const percentageOfField = sourceField / numInBand;
-          const leftmostTick =
-            teamsCurrentDirection.get(sourceNode)! - 0.5 * percentageOfField;
-          const shift =
-            0.5 * (percentageOfField / sourceField) +
-            (percentageOfField / sourceField) *
-              childrenTraversed.get(sourceNode)!;
-          const pastX = initialRivalryWeb.getNodeAttributes(sourceNode).x;
-          const pastY = initialRivalryWeb.getNodeAttributes(sourceNode).y;
-          const direction = Math.PI * 2 * (leftmostTick + shift);
-          const [currentX, currentY] = findClosestPointOnRayTowardA(
-            pastX,
-            pastY,
-            direction,
-            path.lastWeight()
-          );
-          //const currentX = pastX + path.lastWeight() * Math.cos(direction);
-          //const currentY = pastY + path.lastWeight() * Math.sin(direction);
-          initialRivalryWeb.addNode(name, {
-            x: currentX,
-            y: currentY,
-            label: name,
-            color: getColor(givenWeb.findVertex(name)!.conference),
-            size: 10,
-          });
-          initialRivalryWeb.addDirectedEdge(sourceNode, name);
-          teamsCurrentDirection.set(name, leftmostTick + shift);
-          childrenTraversed.set(
-            sourceNode,
-            childrenTraversed.get(sourceNode)! + 1
-          );
-        } catch (error) {
-          console.log(error);
-          console.log(name);
-          break;
-        }
-      }
-    }
-    return initialRivalryWeb;
+    return curr_graph;
   }
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let renderer: Sigma | null = null;
-    const rivalryWeb = initialPositionTeamCentered("Notre Dame");
+    const rivalryWeb = positionTeamCentered("Florida", true, new Graph());
     // Retrieve some useful DOM elements:
     const zoomInBtn = document.getElementById("zoom-in") as HTMLButtonElement;
     const zoomOutBtn = document.getElementById("zoom-out") as HTMLButtonElement;
@@ -309,6 +143,11 @@ const WebVisualizer: React.FC = () => {
       maxCameraRatio: 3,
     });
     const camera = renderer.getCamera();
+    renderer.on("clickNode", ({ node }) => {
+      console.log(node);
+      positionTeamCentered(node, false, rivalryWeb);
+      renderer.refresh();
+    });
 
     // Bind zoom manipulation buttons
     zoomInBtn.addEventListener("click", () => {
@@ -342,10 +181,11 @@ const WebVisualizer: React.FC = () => {
     <Box>
       <Box
         sx={{
-          width: "5vw",
+          width: "10vw",
           height: "4vh",
           border: "2px dashed green",
           backgroundColor: "yellow",
+          margin: "10px",
         }}
         id="zoom-out"
       >
@@ -353,10 +193,11 @@ const WebVisualizer: React.FC = () => {
       </Box>
       <Box
         sx={{
-          width: "5vw",
+          width: "10vw",
           height: "4vh",
           border: "2px dashed green",
           backgroundColor: "yellow",
+          margin: "10px",
         }}
         id="zoom-in"
       >
@@ -364,10 +205,11 @@ const WebVisualizer: React.FC = () => {
       </Box>
       <Box
         sx={{
-          width: "5vw",
+          width: "10vw",
           height: "4vh",
           border: "2px dashed green",
           backgroundColor: "yellow",
+          margin: "10px",
         }}
         id="zoom-reset"
       >
@@ -375,10 +217,11 @@ const WebVisualizer: React.FC = () => {
       </Box>
       <Box
         sx={{
-          width: "5vw",
+          width: "10vw",
           height: "4vh",
           border: "2px dashed green",
           backgroundColor: "yellow",
+          margin: "10px",
         }}
         id="labels-threshold"
       >

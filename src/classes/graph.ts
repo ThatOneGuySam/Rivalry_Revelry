@@ -17,6 +17,7 @@ export type recursingStep = {
     directChildren: string[];
     parent: string;
     length: number;
+    percentage: number;
 }
 
 export type advancedSettings = {
@@ -332,7 +333,7 @@ export class Graph{
         const dijkMap = this.Dijkstra(source);
         const result = new Map<string, recursingStep>();
         for(const [name, _] of dijkMap){
-            result.set(name, {totalChildren: -1, directChildren: [], parent: "", length: 0});
+            result.set(name, {totalChildren: -1, directChildren: [], parent: "", length: 0, percentage: 0});
         }
         for(const [name, path] of dijkMap){
             result.get(name)!.length = path.weight;
@@ -342,6 +343,21 @@ export class Graph{
             if(path.lastStep()){
                 result.get(path.lastStep()!.name)!.directChildren.push(name);
                 result.get(name)!.parent = path.lastStep()!.name;
+            }
+        }
+        for(const [_, data] of result){
+            if(data.directChildren.length > 0){
+                let percentages: Record<string, number> = {};
+                for(const t of data.directChildren){
+                    percentages[t] = result.get(t)!.totalChildren + 1;
+                }
+                const poweredEntries = Object.entries(percentages).map(
+                    ([key, val]) => [key, Math.pow(val, 0.25)] as const
+                    );
+                const total = poweredEntries.reduce((sum, [, val]) => sum + val, 0);
+                for(const target of data.directChildren){
+                    result.get(target)!.percentage = Object.fromEntries(poweredEntries)[target] / total;
+                }
             }
         }
         return result;
