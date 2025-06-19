@@ -47,30 +47,20 @@ const WebVisualizer: React.FC = () => {
     return newValues;
   }
 
-  function positionTeamCentered(
-    teamName: string,
-    initiating: boolean,
-    curr_graph: Graph
-  ): Graph {
+  function initialPositionTeamCentered(teamName: string): Graph {
+    const initialRivalryWeb = new Graph();
     const givenWeb = makeOriginalWeb();
     const recursivePathSet: Map<string, recursingStep> =
       givenWeb.WebRecursionDijkstra(teamName);
     const teamsDials = new Map<string, [number, number, number]>();
     //deal with initial node first
-    if (initiating) {
-      curr_graph.addNode(teamName, {
-        x: 0,
-        y: 0,
-        label: teamName,
-        color: getColor(givenWeb.findVertex(teamName)!.conference),
-        size: 10,
-      });
-    } else {
-      curr_graph.clearEdges();
-      curr_graph.setNodeAttribute(teamName, "x", 0);
-      curr_graph.setNodeAttribute(teamName, "y", 0);
-    }
-
+    initialRivalryWeb.addNode(teamName, {
+      x: 0,
+      y: 0,
+      label: teamName,
+      color: getColor(givenWeb.findVertex(teamName)!.conference),
+      size: 10,
+    });
     teamsDials.set(teamName, [-1 * Math.PI, -1 * Math.PI, Math.PI]);
     const teamQueue: string[] = canyonSort(
       recursivePathSet,
@@ -82,7 +72,6 @@ const WebVisualizer: React.FC = () => {
       //Find its field
       const ticks = teamsDials.get(currInfo.parent)!;
       const percentageOfParent = currInfo.percentage;
-      console.log(percentageOfParent);
       const leftTick = ticks[1];
       const rightTick = ticks[1] + (ticks[2] - ticks[0]) * percentageOfParent;
       //set dials to new positions
@@ -92,35 +81,29 @@ const WebVisualizer: React.FC = () => {
       const midTick = (leftTick + rightTick) / 2;
       const currentX = Math.cos(midTick) * currInfo.length;
       const currentY = Math.sin(midTick) * currInfo.length;
-      //Log for Sam
-      console.log(currNode, ", son of ", currInfo.parent);
-      console.log(
-        ticks[0] / (Math.PI * 2),
-        ticks[1] / (Math.PI * 2),
-        ticks[2] / (Math.PI * 2)
-      );
-      console.log(
-        leftTick / (Math.PI * 2),
-        midTick / (Math.PI * 2),
-        rightTick / (Math.PI * 2)
-      );
-      if (initiating) {
-        curr_graph.addNode(currNode, {
-          x: currentX,
-          y: currentY,
-          label: currNode,
-          color: getColor(givenWeb.findVertex(currNode)!.conference),
-          size: 10,
-        });
-      } else {
-        curr_graph.setNodeAttribute(currNode, "x", currentX);
-        curr_graph.setNodeAttribute(currNode, "y", currentY);
-      }
-      curr_graph.addDirectedEdge(currInfo.parent, currNode);
+      initialRivalryWeb.addNode(currNode, {
+        x: currentX,
+        y: currentY,
+        label: currNode,
+        color: getColor(givenWeb.findVertex(currNode)!.conference),
+        size: 10,
+      });
+      initialRivalryWeb.addEdge(currInfo.parent, currNode, {
+        color: "rgba(200,50,50,0.9)",
+        size: "2.5",
+      });
       //Add it's children to queue
       teamQueue.push(...canyonSort(recursivePathSet, currInfo.directChildren));
     }
-    return curr_graph;
+    for (const e of givenWeb.edges) {
+      if (!initialRivalryWeb.hasEdge(e.source.name, e.dest.name)) {
+        initialRivalryWeb.addEdge(e.source.name, e.dest.name, {
+          color: "rgba(50,50,50,0.25)",
+          size: "1",
+        });
+      }
+    }
+    return initialRivalryWeb;
   }
 
   function getNodePositions(
@@ -148,7 +131,6 @@ const WebVisualizer: React.FC = () => {
       //Find its field
       const ticks = teamsDials.get(currInfo.parent)!;
       const percentageOfParent = currInfo.percentage;
-      console.log(percentageOfParent);
       const leftTick = ticks[1];
       const rightTick = ticks[1] + (ticks[2] - ticks[0]) * percentageOfParent;
       //set dials to new positions
@@ -158,18 +140,6 @@ const WebVisualizer: React.FC = () => {
       const midTick = (leftTick + rightTick) / 2;
       const currentX = Math.cos(midTick) * currInfo.length;
       const currentY = Math.sin(midTick) * currInfo.length;
-      //Log for Sam
-      console.log(currNode, ", son of ", currInfo.parent);
-      console.log(
-        ticks[0] / (Math.PI * 2),
-        ticks[1] / (Math.PI * 2),
-        ticks[2] / (Math.PI * 2)
-      );
-      console.log(
-        leftTick / (Math.PI * 2),
-        midTick / (Math.PI * 2),
-        rightTick / (Math.PI * 2)
-      );
       result.set(currNode, { x: currentX, y: currentY, children: [] });
       result.get(currInfo.parent)!.children.push(currNode);
       //Add it's children to queue
@@ -190,10 +160,22 @@ const WebVisualizer: React.FC = () => {
     });
     const newPositions = getNodePositions(teamName);
     const start = performance.now();
-    graph.clearEdges();
+
+    graph.forEachEdge((edgeKey) => {
+      graph.setEdgeAttribute(edgeKey, "color", "rgba(50, 50, 50, 0.25)");
+      graph.setEdgeAttribute(edgeKey, "size", "1");
+    });
     for (const [name, data] of newPositions) {
       for (const e of data.children) {
-        graph.addEdge(name, e);
+        try {
+          graph.setEdgeAttribute(name, e, "color", "rgba(200,50,50,0.9)");
+          graph.setEdgeAttribute(name, e, "size", "2.5");
+        } catch (error) {
+          console.log(name);
+          console.log(e);
+          console.log(graph.hasEdge(name, e));
+          break;
+        }
       }
     }
 
@@ -225,7 +207,7 @@ const WebVisualizer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let renderer: Sigma | null = null;
-    const rivalryWeb = positionTeamCentered("Florida", true, new Graph());
+    const rivalryWeb = initialPositionTeamCentered("Florida");
     // Retrieve some useful DOM elements:
     const zoomInBtn = document.getElementById("zoom-in") as HTMLButtonElement;
     const zoomOutBtn = document.getElementById("zoom-out") as HTMLButtonElement;
