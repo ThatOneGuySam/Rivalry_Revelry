@@ -123,6 +123,105 @@ const WebVisualizer: React.FC = () => {
     return curr_graph;
   }
 
+  function getNodePositions(
+    teamName: string
+  ): Map<string, { x: number; y: number; children: string[] }> {
+    const result = new Map<
+      string,
+      { x: number; y: number; children: string[] }
+    >();
+    const givenWeb = makeOriginalWeb();
+    const recursivePathSet: Map<string, recursingStep> =
+      givenWeb.WebRecursionDijkstra(teamName);
+    const teamsDials = new Map<string, [number, number, number]>();
+    //deal with initial node first
+    result.set(teamName, { x: 0, y: 0, children: [] });
+
+    teamsDials.set(teamName, [-1 * Math.PI, -1 * Math.PI, Math.PI]);
+    const teamQueue: string[] = canyonSort(
+      recursivePathSet,
+      recursivePathSet.get(teamName)!.directChildren
+    );
+    while (teamQueue.length > 0) {
+      const currNode: string = teamQueue.shift()!;
+      const currInfo: recursingStep = recursivePathSet.get(currNode)!;
+      //Find its field
+      const ticks = teamsDials.get(currInfo.parent)!;
+      const percentageOfParent = currInfo.percentage;
+      console.log(percentageOfParent);
+      const leftTick = ticks[1];
+      const rightTick = ticks[1] + (ticks[2] - ticks[0]) * percentageOfParent;
+      //set dials to new positions
+      teamsDials.set(currNode, [leftTick, leftTick, rightTick]);
+      teamsDials.set(currInfo.parent, [ticks[0], rightTick, ticks[2]]);
+      //Place Node
+      const midTick = (leftTick + rightTick) / 2;
+      const currentX = Math.cos(midTick) * currInfo.length;
+      const currentY = Math.sin(midTick) * currInfo.length;
+      //Log for Sam
+      console.log(currNode, ", son of ", currInfo.parent);
+      console.log(
+        ticks[0] / (Math.PI * 2),
+        ticks[1] / (Math.PI * 2),
+        ticks[2] / (Math.PI * 2)
+      );
+      console.log(
+        leftTick / (Math.PI * 2),
+        midTick / (Math.PI * 2),
+        rightTick / (Math.PI * 2)
+      );
+      result.set(currNode, { x: currentX, y: currentY, children: [] });
+      result.get(currInfo.parent)!.children.push(currNode);
+      //Add it's children to queue
+      teamQueue.push(...canyonSort(recursivePathSet, currInfo.directChildren));
+    }
+    return result;
+  }
+
+  function animateCentering(
+    graph: Graph,
+    renderer: Sigma,
+    teamName: string,
+    duration = 1000
+  ) {
+    const initialNodePositions = new Map<string, { x: number; y: number }>();
+    graph.forEachNode((key, attributes) => {
+      initialNodePositions.set(key, { x: attributes.x, y: attributes.y });
+    });
+    const newPositions = getNodePositions(teamName);
+    const start = performance.now();
+    graph.clearEdges();
+    for (const [name, data] of newPositions) {
+      for (const e of data.children) {
+        graph.addEdge(name, e);
+      }
+    }
+
+    function step(timestamp: number) {
+      const progress = Math.min((timestamp - start) / duration, 1);
+      for (const nodeKey of initialNodePositions.keys()) {
+        const x =
+          initialNodePositions.get(nodeKey)!.x +
+          (newPositions.get(nodeKey)!.x -
+            initialNodePositions.get(nodeKey)!.x) *
+            progress;
+        const y =
+          initialNodePositions.get(nodeKey)!.y +
+          (newPositions.get(nodeKey)!.y -
+            initialNodePositions.get(nodeKey)!.y) *
+            progress;
+
+        graph.setNodeAttribute(nodeKey, "x", x);
+        graph.setNodeAttribute(nodeKey, "y", y);
+      }
+      renderer.refresh();
+
+      if (progress < 1) requestAnimationFrame(step); // schedule the next frame
+    }
+
+    requestAnimationFrame(step); // start animation
+  }
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let renderer: Sigma | null = null;
@@ -145,8 +244,7 @@ const WebVisualizer: React.FC = () => {
     const camera = renderer.getCamera();
     renderer.on("clickNode", ({ node }) => {
       console.log(node);
-      positionTeamCentered(node, false, rivalryWeb);
-      renderer.refresh();
+      animateCentering(rivalryWeb, renderer, node, 500);
     });
 
     // Bind zoom manipulation buttons

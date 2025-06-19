@@ -352,7 +352,7 @@ export class Graph{
                     percentages[t] = result.get(t)!.totalChildren + 1;
                 }
                 const poweredEntries = Object.entries(percentages).map(
-                    ([key, val]) => [key, Math.pow(val, 0.25)] as const
+                    ([key, val]) => [key, Math.pow(val, 0.66)] as const
                     );
                 const total = poweredEntries.reduce((sum, [, val]) => sum + val, 0);
                 for(const target of data.directChildren){
