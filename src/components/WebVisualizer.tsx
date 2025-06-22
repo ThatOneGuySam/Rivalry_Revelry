@@ -1,213 +1,87 @@
 import Graph from "graphology";
 import Sigma from "sigma";
-import { makeOriginalWeb } from "../data/rivalryWeb";
-import { useEffect, useRef } from "react";
-import { Box, Typography } from "@mui/material";
-import { recursingStep } from "../classes/graph";
+import { NodeImageProgram } from "@sigma/node-image";
+import { useEffect, useRef, useState } from "react";
+import { Avatar, Box, Typography } from "@mui/material";
+import {
+  initialPositionTeamCentered,
+  getNodePositions,
+  nodeAttributes,
+  edgeAttributes,
+  advancedEdgeAttributes,
+} from "../classes/visualizerFunctions";
 
 const WebVisualizer: React.FC = () => {
-  type StringToStringDictionary = {
-    [key: string]: string;
-  };
-  const colorByConference: StringToStringDictionary = {
-    SEC: "red",
-    B10: "blue",
-    B12: "green",
-    ACC: "purple",
-    MW: "yellow",
-    Sunbelt: "orange",
-    MAC: "olive",
-    PAC2: "pink",
-    Ind: "gray",
-    CUSA: "teal",
-    AAC: "black",
-  };
-
-  function getColor(conf: string) {
-    try {
-      const c = colorByConference[conf];
-      return c;
-    } catch (error) {
-      return "white";
-    }
-  }
-
-  function canyonSort(sortKey: Map<string, recursingStep>, values: string[]) {
-    const newValues: string[] = [];
-    const sortedValues = [...values].sort(
-      (a, b) => sortKey.get(a)!.totalChildren - sortKey.get(b)!.totalChildren
-    );
-    for (let i = 0; i < sortedValues.length; i++) {
-      if (i % 2 === 0) {
-        newValues.unshift(sortedValues[i]);
-      } else {
-        newValues.push(sortedValues[i]);
-      }
-    }
-    return newValues;
-  }
-
-  function initialPositionTeamCentered(teamName: string): Graph {
-    const initialRivalryWeb = new Graph();
-    const givenWeb = makeOriginalWeb();
-    const recursivePathSet: Map<string, recursingStep> =
-      givenWeb.WebRecursionDijkstra(teamName);
-    const teamsDials = new Map<string, [number, number, number]>();
-    //deal with initial node first
-    initialRivalryWeb.addNode(teamName, {
-      x: 0,
-      y: 0,
-      label: teamName,
-      color: getColor(givenWeb.findVertex(teamName)!.conference),
-      size: 10,
-    });
-    teamsDials.set(teamName, [-1 * Math.PI, -1 * Math.PI, Math.PI]);
-    const teamQueue: string[] = canyonSort(
-      recursivePathSet,
-      recursivePathSet.get(teamName)!.directChildren
-    );
-    while (teamQueue.length > 0) {
-      const currNode: string = teamQueue.shift()!;
-      const currInfo: recursingStep = recursivePathSet.get(currNode)!;
-      //Find its field
-      const ticks = teamsDials.get(currInfo.parent)!;
-      const percentageOfParent = currInfo.percentage;
-      const leftTick = ticks[1];
-      const rightTick = ticks[1] + (ticks[2] - ticks[0]) * percentageOfParent;
-      //set dials to new positions
-      teamsDials.set(currNode, [leftTick, leftTick, rightTick]);
-      teamsDials.set(currInfo.parent, [ticks[0], rightTick, ticks[2]]);
-      //Place Node
-      const midTick = (leftTick + rightTick) / 2;
-      const currentX = Math.cos(midTick) * currInfo.length;
-      const currentY = Math.sin(midTick) * currInfo.length;
-      initialRivalryWeb.addNode(currNode, {
-        x: currentX,
-        y: currentY,
-        label: currNode,
-        color: getColor(givenWeb.findVertex(currNode)!.conference),
-        size: 10,
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [selectionType, setSelectionType] = useState("node");
+  const [selectedNode, setSelectedNode] = useState<nodeAttributes>();
+  const [selectedEdge, setSelectedEdge] = useState<advancedEdgeAttributes>();
+  useEffect(() => {
+    function processandSetEdgeInfo(web: Graph, edgeData: edgeAttributes) {
+      setSelectedEdge({
+        sourceTeam: edgeData.sourceTeam,
+        destTeam: edgeData.destTeam,
+        sourceTeamImage: web.getNodeAttributes(edgeData.sourceTeam).image,
+        destTeamImage: web.getNodeAttributes(edgeData.destTeam).image,
       });
-      initialRivalryWeb.addEdge(currInfo.parent, currNode, {
-        color: "rgba(200,50,50,0.9)",
-        size: "2.5",
+    }
+    function animateCentering(
+      graph: Graph,
+      renderer: Sigma,
+      teamName: string,
+      duration = 1000
+    ) {
+      const initialNodePositions = new Map<string, { x: number; y: number }>();
+      graph.forEachNode((key, attributes) => {
+        initialNodePositions.set(key, { x: attributes.x, y: attributes.y });
       });
-      //Add it's children to queue
-      teamQueue.push(...canyonSort(recursivePathSet, currInfo.directChildren));
-    }
-    for (const e of givenWeb.edges) {
-      if (!initialRivalryWeb.hasEdge(e.source.name, e.dest.name)) {
-        initialRivalryWeb.addEdge(e.source.name, e.dest.name, {
-          color: "rgba(50,50,50,0.25)",
-          size: "1",
-        });
-      }
-    }
-    return initialRivalryWeb;
-  }
+      const newPositions = getNodePositions(teamName);
+      const start = performance.now();
 
-  function getNodePositions(
-    teamName: string
-  ): Map<string, { x: number; y: number; children: string[] }> {
-    const result = new Map<
-      string,
-      { x: number; y: number; children: string[] }
-    >();
-    const givenWeb = makeOriginalWeb();
-    const recursivePathSet: Map<string, recursingStep> =
-      givenWeb.WebRecursionDijkstra(teamName);
-    const teamsDials = new Map<string, [number, number, number]>();
-    //deal with initial node first
-    result.set(teamName, { x: 0, y: 0, children: [] });
-
-    teamsDials.set(teamName, [-1 * Math.PI, -1 * Math.PI, Math.PI]);
-    const teamQueue: string[] = canyonSort(
-      recursivePathSet,
-      recursivePathSet.get(teamName)!.directChildren
-    );
-    while (teamQueue.length > 0) {
-      const currNode: string = teamQueue.shift()!;
-      const currInfo: recursingStep = recursivePathSet.get(currNode)!;
-      //Find its field
-      const ticks = teamsDials.get(currInfo.parent)!;
-      const percentageOfParent = currInfo.percentage;
-      const leftTick = ticks[1];
-      const rightTick = ticks[1] + (ticks[2] - ticks[0]) * percentageOfParent;
-      //set dials to new positions
-      teamsDials.set(currNode, [leftTick, leftTick, rightTick]);
-      teamsDials.set(currInfo.parent, [ticks[0], rightTick, ticks[2]]);
-      //Place Node
-      const midTick = (leftTick + rightTick) / 2;
-      const currentX = Math.cos(midTick) * currInfo.length;
-      const currentY = Math.sin(midTick) * currInfo.length;
-      result.set(currNode, { x: currentX, y: currentY, children: [] });
-      result.get(currInfo.parent)!.children.push(currNode);
-      //Add it's children to queue
-      teamQueue.push(...canyonSort(recursivePathSet, currInfo.directChildren));
-    }
-    return result;
-  }
-
-  function animateCentering(
-    graph: Graph,
-    renderer: Sigma,
-    teamName: string,
-    duration = 1000
-  ) {
-    const initialNodePositions = new Map<string, { x: number; y: number }>();
-    graph.forEachNode((key, attributes) => {
-      initialNodePositions.set(key, { x: attributes.x, y: attributes.y });
-    });
-    const newPositions = getNodePositions(teamName);
-    const start = performance.now();
-
-    graph.forEachEdge((edgeKey) => {
-      graph.setEdgeAttribute(edgeKey, "color", "rgba(50, 50, 50, 0.25)");
-      graph.setEdgeAttribute(edgeKey, "size", "1");
-    });
-    for (const [name, data] of newPositions) {
-      for (const e of data.children) {
-        try {
-          graph.setEdgeAttribute(name, e, "color", "rgba(200,50,50,0.9)");
-          graph.setEdgeAttribute(name, e, "size", "2.5");
-        } catch (error) {
-          console.log(name);
-          console.log(e);
-          console.log(graph.hasEdge(name, e));
-          break;
+      graph.forEachEdge((edgeKey) => {
+        graph.setEdgeAttribute(edgeKey, "color", "rgba(50, 50, 50, 0.25)");
+        graph.setEdgeAttribute(edgeKey, "size", "1");
+      });
+      for (const [name, data] of newPositions) {
+        for (const e of data.children) {
+          try {
+            graph.setEdgeAttribute(name, e, "color", "rgba(200,50,50,0.9)");
+            graph.setEdgeAttribute(name, e, "size", "2.5");
+          } catch (error) {
+            console.log(name);
+            console.log(e);
+            console.log(graph.hasEdge(name, e));
+            break;
+          }
         }
       }
-    }
 
-    function step(timestamp: number) {
-      const progress = Math.min((timestamp - start) / duration, 1);
-      for (const nodeKey of initialNodePositions.keys()) {
-        const x =
-          initialNodePositions.get(nodeKey)!.x +
-          (newPositions.get(nodeKey)!.x -
-            initialNodePositions.get(nodeKey)!.x) *
-            progress;
-        const y =
-          initialNodePositions.get(nodeKey)!.y +
-          (newPositions.get(nodeKey)!.y -
-            initialNodePositions.get(nodeKey)!.y) *
-            progress;
+      function step(timestamp: number) {
+        const progress = Math.min((timestamp - start) / duration, 1);
+        for (const nodeKey of initialNodePositions.keys()) {
+          const x =
+            initialNodePositions.get(nodeKey)!.x +
+            (newPositions.get(nodeKey)!.x -
+              initialNodePositions.get(nodeKey)!.x) *
+              progress;
+          const y =
+            initialNodePositions.get(nodeKey)!.y +
+            (newPositions.get(nodeKey)!.y -
+              initialNodePositions.get(nodeKey)!.y) *
+              progress;
 
-        graph.setNodeAttribute(nodeKey, "x", x);
-        graph.setNodeAttribute(nodeKey, "y", y);
+          graph.setNodeAttribute(nodeKey, "x", x);
+          graph.setNodeAttribute(nodeKey, "y", y);
+        }
+        renderer.refresh();
+
+        if (progress < 1) requestAnimationFrame(step); // schedule the next frame
       }
-      renderer.refresh();
 
-      if (progress < 1) requestAnimationFrame(step); // schedule the next frame
+      requestAnimationFrame(step); // start animation
     }
-
-    requestAnimationFrame(step); // start animation
-  }
-
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    let renderer: Sigma | null = null;
     const rivalryWeb = initialPositionTeamCentered("Florida");
+    setSelectedNode(rivalryWeb.getNodeAttributes("Florida") as nodeAttributes);
     // Retrieve some useful DOM elements:
     const zoomInBtn = document.getElementById("zoom-in") as HTMLButtonElement;
     const zoomOutBtn = document.getElementById("zoom-out") as HTMLButtonElement;
@@ -219,14 +93,41 @@ const WebVisualizer: React.FC = () => {
     ) as HTMLInputElement;
 
     // Instantiate sigma:
-    renderer = new Sigma(rivalryWeb, containerRef.current!, {
+    const renderer = new Sigma(rivalryWeb, containerRef.current!, {
       minCameraRatio: 0.008,
-      maxCameraRatio: 3,
+      maxCameraRatio: 1.5,
+      enableEdgeEvents: true,
+      nodeProgramClasses: {
+        image: NodeImageProgram,
+      },
+      defaultNodeType: "image",
+      itemSizesReference: "positions",
+      autoRescale: false,
     });
+    console.log(selectedNode);
     const camera = renderer.getCamera();
+    camera.setState({
+      ratio: 0.5,
+    });
     renderer.on("clickNode", ({ node }) => {
       console.log(node);
+      setSelectedNode(rivalryWeb.getNodeAttributes(node) as nodeAttributes);
+      setSelectionType("node");
+    });
+
+    renderer.on("doubleClickNode", ({ node, event }) => {
+      console.log(node);
+      event.preventSigmaDefault();
+      setSelectedNode(rivalryWeb.getNodeAttributes(node) as nodeAttributes);
+      setSelectionType("node");
       animateCentering(rivalryWeb, renderer, node, 500);
+    });
+
+    renderer.on("clickEdge", ({ edge }) => {
+      console.log(edge);
+      const edgeData = rivalryWeb.getEdgeAttributes(edge) as edgeAttributes;
+      processandSetEdgeInfo(rivalryWeb, edgeData);
+      setSelectionType("edge");
     });
 
     // Bind zoom manipulation buttons
@@ -253,7 +154,7 @@ const WebVisualizer: React.FC = () => {
       renderer.getSetting("labelRenderedSizeThreshold") + "";
 
     return () => {
-      renderer?.kill();
+      renderer.kill();
     };
   }, []);
 
@@ -307,15 +208,63 @@ const WebVisualizer: React.FC = () => {
       >
         <Typography variant="h6">Labels?</Typography>
       </Box>
-      <div
-        ref={containerRef}
-        style={{
-          width: "100%",
-          height: "600px",
-          textAlign: "left",
-          border: "1px solid black",
-        }}
-      />
+      <Box sx={{ display: "flex", flexDirection: "row" }}>
+        <div
+          style={{
+            width: "30%",
+            border: "1px solid black",
+            height: "90vmin",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          {selectionType == "node" && selectedNode && (
+            <>
+              <Avatar
+                variant="square"
+                src={selectedNode.image}
+                alt={selectedNode.label}
+                sx={{ width: "60%", height: "auto", margin: 1 }}
+              />
+              <Typography variant="h4">{selectedNode.label}</Typography>
+            </>
+          )}
+          {selectionType == "edge" && selectedEdge && (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  width: "100%",
+                }}
+              >
+                <Avatar
+                  variant="square"
+                  src={selectedEdge.sourceTeamImage}
+                  alt={selectedEdge.sourceTeam}
+                  sx={{ width: "45%", height: "auto", margin: 1 }}
+                />
+                <Avatar
+                  variant="square"
+                  src={selectedEdge.destTeamImage}
+                  alt={selectedEdge.destTeam}
+                  sx={{ width: "45%", height: "auto", margin: 1 }}
+                />
+              </Box>
+            </>
+          )}
+        </div>
+        <div
+          ref={containerRef}
+          style={{
+            width: "70%",
+            height: "90vmin",
+            textAlign: "left",
+            border: "1px solid black",
+          }}
+        />
+      </Box>
     </Box>
   );
 };
