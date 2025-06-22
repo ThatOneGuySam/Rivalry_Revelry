@@ -1,6 +1,6 @@
 import Graph from "graphology";
 import { makeOriginalWeb } from "../data/rivalryWeb";
-import { recursingStep } from "../classes/graph";
+import { recursingStep, Graph as userGraph } from "../classes/graph";
 
 type StringToStringDictionary = {
     [key: string]: string;
@@ -27,6 +27,9 @@ type StringToStringDictionary = {
     destTeam: string,
     sourceTeamImage: string,
     destTeamImage: string,
+    lastColor: string,
+    lastSize: number,
+    label: string
   }
 
 const colorByConference: StringToStringDictionary = {
@@ -67,10 +70,10 @@ const colorByConference: StringToStringDictionary = {
         return newValues;
       }
 
-      export function initialPositionTeamCentered(teamName: string): Graph {
-          const initialRivalryWeb = new Graph();
-          const givenWeb = makeOriginalWeb();
-          const recursivePathSet: Map<string, recursingStep> =
+      export function initialPositionTeamCentered(teamName: string, doneTeams: string[] = [], initialRivalryWeb = new Graph(), givenWeb = makeOriginalWeb()): [Graph, userGraph, number, number]  {
+        let minX = 0;
+        let maxX = 0;  
+        const recursivePathSet: Map<string, recursingStep> =
             givenWeb.WebRecursionDijkstra(teamName);
           const teamsDials = new Map<string, [number, number, number]>();
           //add highlights
@@ -91,7 +94,7 @@ const colorByConference: StringToStringDictionary = {
             size: 20,
             image: givenWeb.findVertex(teamName)!.logoPath(),
           });
-          
+          doneTeams.push(teamName);
           teamsDials.set(teamName, [-1 * Math.PI, -1 * Math.PI, Math.PI]);
           const teamQueue: string[] = canyonSort(
             recursivePathSet,
@@ -120,42 +123,64 @@ const colorByConference: StringToStringDictionary = {
               size: 20,
               image: givenWeb.findVertex(currNode)!.logoPath(),
             });
-            initialRivalryWeb.addDirectedEdge(currInfo.parent, currNode, {
+            doneTeams.push(currNode);
+            initialRivalryWeb.addEdge(currInfo.parent, currNode, {
               color: "rgba(200,50,50,0.9)",
-              size: "2.5",
+              size: "5",
               sourceTeam: currInfo.parent,
               destTeam: currNode
             });
             //Add it's children to queue
             teamQueue.push(...canyonSort(recursivePathSet, currInfo.directChildren));
+            if(currentX < minX){
+                minX = currentX;
+            }
+            if(currentX > maxX){
+                maxX = currentX;
+            }
           }
           for (const e of givenWeb.edges) {
-            if (!initialRivalryWeb.hasEdge(e.source.name, e.dest.name)) {
-              initialRivalryWeb.addDirectedEdge(e.source.name, e.dest.name, {
+            if (!initialRivalryWeb.hasEdge(e.source.name, e.dest.name) && !initialRivalryWeb.hasEdge(e.dest.name, e.source.name)) {
+              initialRivalryWeb.addEdge(e.source.name, e.dest.name, {
                 color: "rgba(50,50,50,0.25)",
-                size: "1",
+                size: "3.5",
                 sourceTeam: e.source.name,
                 destTeam: e.dest.name,
               });
             }
           }
-          return initialRivalryWeb;
+          const missingTeams = givenWeb.getMissingTeams(doneTeams);
+          if(missingTeams.length > 0){
+            let bonusMinX = 0;
+            let bonusMaxX = 0;
+            [initialRivalryWeb, givenWeb, bonusMinX, bonusMaxX] = initialPositionTeamCentered(missingTeams[0], doneTeams, initialRivalryWeb, givenWeb);
+            console.log(bonusMinX);
+            initialRivalryWeb.forEachNode((node, attributes) => {
+                if(node in missingTeams){
+                    attributes.x += (maxX + (bonusMaxX-bonusMinX) + 100);
+                }
+            });
+          }
+          return [initialRivalryWeb, givenWeb, minX, maxX];
         }
 
         export function getNodePositions(
-            teamName: string
-          ): Map<string, { x: number; y: number; children: string[] }> {
+            teamName: string,
+            givenWeb: userGraph,
+            doneTeams: string[] = []
+          ): [Map<string, { x: number; y: number; children: string[] }>, number, number] {
             const result = new Map<
               string,
               { x: number; y: number; children: string[] }
             >();
-            const givenWeb = makeOriginalWeb();
+            let minX = 0;
+            let maxX = 0;
             const recursivePathSet: Map<string, recursingStep> =
               givenWeb.WebRecursionDijkstra(teamName);
             const teamsDials = new Map<string, [number, number, number]>();
             //deal with initial node first
             result.set(teamName, { x: 0, y: 0, children: [] });
-        
+            doneTeams.push(teamName);
             teamsDials.set(teamName, [-1 * Math.PI, -1 * Math.PI, Math.PI]);
             const teamQueue: string[] = canyonSort(
               recursivePathSet,
@@ -177,9 +202,25 @@ const colorByConference: StringToStringDictionary = {
               const currentX = Math.cos(midTick) * (currInfo.length * 25);
               const currentY = Math.sin(midTick) * (currInfo.length * 25);
               result.set(currNode, { x: currentX, y: currentY, children: [] });
+              doneTeams.push(currNode);
               result.get(currInfo.parent)!.children.push(currNode);
               //Add it's children to queue
               teamQueue.push(...canyonSort(recursivePathSet, currInfo.directChildren));
+              if(currentX < minX){
+                minX = currentX;
+              }
+              if(currentX > maxX){
+                maxX = currentX;
+              }
             }
-            return result;
+            const missingTeams = givenWeb.getMissingTeams(doneTeams);
+            if(missingTeams.length > 0){
+                const [extraResults, bonusMinX, bonusMaxX] = getNodePositions(missingTeams[0], givenWeb, doneTeams);
+                for(const [team, loc] of extraResults){
+                    result.set(team, loc);
+                    result.get(team)!.x += (maxX + (bonusMaxX-bonusMinX) + 100);
+                }
+            }
+
+            return [result, minX, maxX];
           }

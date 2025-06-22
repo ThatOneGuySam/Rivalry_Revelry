@@ -223,6 +223,25 @@ export class Graph{
         }
     }
 
+    deleteEdgeByNames(source: string, dest: string): void{
+        const from = this.findVertex(source)
+        const to = this.findVertex(dest);
+        if(from && to){
+            const delEdge: Edge | undefined = this.findEdge(from, to);
+            if(delEdge){
+                this.edges = this.edges.filter(e => e.source !== from || e.dest !== to);
+            from.edges = from.edges.filter(e => e.dest !== to);
+            }
+        }
+        
+    }
+
+    getMissingTeams(teams: string[]): string[]{
+        const missingSet = this.vertices.filter(v => !teams.includes(v.name));
+
+        return missingSet.map(v => v.name);
+    }
+
     Dijkstra(source: string): Map<string, Path>{
         const pathSet = new Map<string, Path>();
         const visited = new Set<Vertex>();
