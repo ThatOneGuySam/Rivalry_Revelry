@@ -190,7 +190,7 @@ export class Graph{
                 console.error("Attempted to direct edge to non existent vertex", name, dests[i]);
                 continue;
             }
-            this.makeEdge(v, d, (10*strengths[i]/maxStrength));
+            this.makeEdge(v, d, Math.max(Math.round(4*(10*strengths[i]/maxStrength))/4, 0.25));
         }
     }
 
