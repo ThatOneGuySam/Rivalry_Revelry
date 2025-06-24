@@ -2,7 +2,7 @@ import Graph from "graphology";
 import Sigma from "sigma";
 import { NodeImageProgram } from "@sigma/node-image";
 import { useEffect, useRef, useState } from "react";
-import { Avatar, Box, Slider, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import {
   initialPositionTeamCentered,
   getNodePositions,
@@ -11,16 +11,15 @@ import {
   advancedEdgeAttributes,
 } from "../classes/visualizerFunctions";
 import { Graph as userGraph } from "../classes/graph";
+import WebSidePanel from "./WebSidePanel";
 
 const WebVisualizer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const givenWebRef = useRef<userGraph | null>(null);
   const graphRef = useRef<Graph | null>(null);
   const rendererRef = useRef<Sigma | null>(null);
-  const [selectionType, setSelectionType] = useState("node");
-  const [selectedNode, setSelectedNode] = useState<nodeAttributes>();
-  const [selectedEdge, setSelectedEdge] =
-    useState<advancedEdgeAttributes | null>(null);
+  const selectionTypeRef = useRef<string>("node");
+  const selectedNodeRef = useRef<nodeAttributes | null>(null);
   const selectedEdgeRef = useRef<advancedEdgeAttributes | null>(null);
   const [sliderOneValue, setSliderOne] = useState<number>(5);
   const sliderOneRef = useRef<number>(5);
@@ -28,106 +27,14 @@ const WebVisualizer: React.FC = () => {
   const [sliderTwoValue, setSliderTwo] = useState<number>(5);
   const sliderTwoRef = useRef<number>(5);
   sliderTwoRef.current = sliderTwoValue;
-  useEffect(() => {
-    selectedEdgeRef.current = selectedEdge;
-  }, [selectedEdge]);
-  const deleteEdgeBtnRef = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    const el = deleteEdgeBtnRef.current;
-    if (!el) return;
-
-    const handleEdgeDeletion = () => {
-      graphRef.current?.dropEdge(selectedEdgeRef.current?.label);
-      givenWebRef.current?.deleteEdgeByNames(
-        selectedEdgeRef.current!.sourceTeam,
-        selectedEdgeRef.current!.destTeam
-      );
-      givenWebRef.current?.deleteEdgeByNames(
-        selectedEdgeRef.current!.destTeam,
-        selectedEdgeRef.current!.sourceTeam
-      );
-      setSelectedEdge(null);
-      rendererRef.current?.scheduleRefresh();
-    };
-
-    el.addEventListener("click", handleEdgeDeletion);
-
-    return () => {
-      el.removeEventListener("click", handleEdgeDeletion);
-    };
-  }, [selectedEdge]);
-  const confirmStrengthsBtnRef = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    const el = confirmStrengthsBtnRef.current;
-    if (!el) return;
-
-    const handleStrengthConfirmation = () => {
-      if (sliderOneRef.current == 0 && sliderTwoRef.current == 0) {
-        graphRef.current?.dropEdge(selectedEdgeRef.current?.label);
-        givenWebRef.current?.deleteEdgeByNames(
-          selectedEdgeRef.current!.sourceTeam,
-          selectedEdgeRef.current!.destTeam
-        );
-        givenWebRef.current?.deleteEdgeByNames(
-          selectedEdgeRef.current!.destTeam,
-          selectedEdgeRef.current!.sourceTeam
-        );
-        setSelectedEdge(null);
-      } else {
-        const sliderOneInitialStrength = givenWebRef.current!.findEdge(
-          givenWebRef.current!.findVertex(selectedEdge!.sourceTeam)!,
-          givenWebRef.current!.findVertex(selectedEdge!.destTeam)!
-        )?.strength;
-        const sliderTwoInitialStrength = givenWebRef.current!.findEdge(
-          givenWebRef.current!.findVertex(selectedEdge!.destTeam)!,
-          givenWebRef.current!.findVertex(selectedEdge!.sourceTeam)!
-        )?.strength;
-        if (sliderOneInitialStrength != 0 && sliderOneRef.current === 0) {
-          givenWebRef.current?.deleteEdgeByNames(
-            selectedEdgeRef.current!.sourceTeam,
-            selectedEdgeRef.current!.destTeam
-          );
-        } else {
-          givenWebRef.current?.updateEdge(
-            givenWebRef.current?.findVertex(
-              selectedEdgeRef.current!.sourceTeam
-            )!,
-            givenWebRef.current?.findVertex(selectedEdgeRef.current!.destTeam)!,
-            sliderOneRef.current
-          );
-        }
-        if (sliderTwoInitialStrength != 0 && sliderTwoRef.current === 0) {
-          givenWebRef.current?.deleteEdgeByNames(
-            selectedEdgeRef.current!.destTeam,
-            selectedEdgeRef.current!.sourceTeam
-          );
-        } else {
-          givenWebRef.current?.updateEdge(
-            givenWebRef.current?.findVertex(selectedEdgeRef.current!.destTeam)!,
-            givenWebRef.current?.findVertex(
-              selectedEdgeRef.current!.sourceTeam
-            )!,
-            sliderTwoRef.current
-          );
-        }
-      }
-
-      rendererRef.current?.scheduleRefresh();
-    };
-
-    el.addEventListener("click", handleStrengthConfirmation);
-
-    return () => {
-      el.removeEventListener("click", handleStrengthConfirmation);
-    };
-  }, [selectedEdge]);
+  const [, forceUpdate] = useState(0);
   useEffect(() => {
     function processandSetEdgeInfo(
       web: Graph,
       edgeData: edgeAttributes,
       edgeName: string
     ) {
-      setSelectedEdge({
+      selectedEdgeRef.current = {
         sourceTeam: edgeData.sourceTeam,
         destTeam: edgeData.destTeam,
         sourceTeamImage: web.getNodeAttributes(edgeData.sourceTeam).image,
@@ -135,7 +42,7 @@ const WebVisualizer: React.FC = () => {
         lastColor: edgeData.color,
         lastSize: edgeData.size,
         label: edgeName,
-      });
+      };
       web.setEdgeAttribute(edgeName, "color", "rgba(255,150,0,0.8)");
       web.setEdgeAttribute(edgeName, "size", 5);
       const sliderOneStrength = givenWebRef.current!.findEdge(
@@ -216,9 +123,10 @@ const WebVisualizer: React.FC = () => {
     console.log(minX, maxX);
     graphRef.current = rivalryWeb;
     givenWebRef.current = userWeb;
-    setSelectedNode(
-      graphRef.current!.getNodeAttributes("Florida") as nodeAttributes
-    );
+    selectedNodeRef.current = graphRef.current!.getNodeAttributes(
+      "Florida"
+    ) as nodeAttributes;
+    forceUpdate((n) => n + 1);
 
     // Instantiate sigma:
     const renderer = new Sigma(graphRef.current, containerRef.current!, {
@@ -250,12 +158,13 @@ const WebVisualizer: React.FC = () => {
           "size",
           selectedEdgeRef.current.lastSize
         );
-        setSelectedEdge(null);
+        selectedEdgeRef.current = null;
       }
-      setSelectedNode(
-        graphRef.current!.getNodeAttributes(node) as nodeAttributes
-      );
-      setSelectionType("node");
+      selectedNodeRef.current = graphRef.current!.getNodeAttributes(
+        node
+      ) as nodeAttributes;
+      selectionTypeRef.current = "node";
+      forceUpdate((n) => n + 1);
     });
 
     rendererRef.current!.on("doubleClickNode", ({ node, event }) => {
@@ -272,12 +181,13 @@ const WebVisualizer: React.FC = () => {
           "size",
           selectedEdgeRef.current.lastSize
         );
-        setSelectedEdge(null);
+        selectedEdgeRef.current = null;
       }
-      setSelectedNode(
-        graphRef.current!.getNodeAttributes(node) as nodeAttributes
-      );
-      setSelectionType("node");
+      selectedNodeRef.current = graphRef.current!.getNodeAttributes(
+        node
+      ) as nodeAttributes;
+      selectionTypeRef.current = "node";
+      forceUpdate((n) => n + 1);
       animateCentering(graphRef.current!, rendererRef.current!, node, 500);
     });
 
@@ -301,7 +211,7 @@ const WebVisualizer: React.FC = () => {
         );
       }
       processandSetEdgeInfo(graphRef.current!, edgeData, edge);
-      setSelectionType("edge");
+      selectionTypeRef.current = "edge";
     });
 
     return () => {
@@ -312,142 +222,14 @@ const WebVisualizer: React.FC = () => {
   return (
     <Box>
       <Box sx={{ display: "flex", flexDirection: "row" }}>
-        <div
-          style={{
-            width: "30%",
-            border: "1px solid black",
-            height: "90vmin",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          {selectionType == "node" && selectedNode && (
-            <>
-              <Avatar
-                variant="square"
-                src={selectedNode.image}
-                alt={selectedNode.label}
-                sx={{ width: "60%", height: "auto", margin: 1 }}
-              />
-              <Typography variant="h4">{selectedNode.label}</Typography>
-            </>
-          )}
-          {selectionType == "edge" && selectedEdge && (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "row",
-                  width: "95%",
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    width: "50%",
-                    height: "50%",
-                  }}
-                >
-                  <Avatar
-                    variant="square"
-                    src={selectedEdge.sourceTeamImage}
-                    alt={selectedEdge.sourceTeam}
-                    sx={{ width: "100%", height: "auto" }}
-                  />
-                  <Typography variant="h4" sx={{ overflowWrap: "break-word" }}>
-                    {selectedEdge.sourceTeam}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    width: "50%",
-                    height: "50%",
-                  }}
-                >
-                  <Avatar
-                    variant="square"
-                    src={selectedEdge.destTeamImage}
-                    alt={selectedEdge.destTeam}
-                    sx={{ width: "100%", height: "auto" }}
-                  />
-                  <Typography variant="h4" sx={{ overflowWrap: "break-word" }}>
-                    {selectedEdge.destTeam}
-                  </Typography>
-                </Box>
-              </Box>
-              <Box
-                sx={{ display: "flex", flexDirection: "column", width: "80%" }}
-              >
-                <Typography variant="h5" sx={{ overflowWrap: "break-word" }}>
-                  Strength from {selectedEdge.sourceTeam} to{" "}
-                  {selectedEdge.destTeam}
-                </Typography>
-                <Slider
-                  value={sliderOneValue}
-                  min={0}
-                  max={10}
-                  step={0.25}
-                  valueLabelDisplay="auto"
-                  onChange={(_, newValue) => setSliderOne(newValue as number)}
-                  sx={{ width: "100%" }}
-                />
-                <Typography variant="h5" sx={{ overflowWrap: "break-word" }}>
-                  Strength from {selectedEdge.destTeam} to{" "}
-                  {selectedEdge.sourceTeam}
-                </Typography>
-                <Slider
-                  value={sliderTwoValue}
-                  min={0}
-                  max={10}
-                  step={0.25}
-                  valueLabelDisplay="auto"
-                  onChange={(_, newValue) => setSliderTwo(newValue as number)}
-                  sx={{ width: "100%" }}
-                />
-              </Box>
-              <Box
-                sx={{
-                  width: "15vw",
-                  height: "6vh",
-                  border: "2px dashed green",
-                  backgroundColor: "yellow",
-                  margin: "20px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-                ref={confirmStrengthsBtnRef}
-              >
-                <Typography variant="h5">Confirm Strengths</Typography>
-              </Box>
-              <Box
-                sx={{
-                  width: "15vw",
-                  height: "6vh",
-                  border: "2px dashed green",
-                  backgroundColor: "yellow",
-                  margin: "20px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-                ref={deleteEdgeBtnRef}
-              >
-                <Typography variant="h5">Delete Rivalry</Typography>
-              </Box>
-            </Box>
-          )}
-        </div>
+        <WebSidePanel
+          graphRef={graphRef}
+          givenWebRef={givenWebRef}
+          rendererRef={rendererRef}
+          selectionTypeRef={selectionTypeRef}
+          selectedEdgeRef={selectedEdgeRef}
+          selectedNodeRef={selectedNodeRef}
+        />
         <div
           ref={containerRef}
           style={{
