@@ -32,6 +32,16 @@ type StringToStringDictionary = {
     label: string
   }
 
+  export type pathAttributes = {
+    sourceTeam: string,
+    sourceTeamImage: string,
+    destTeam: string,
+    destTeamImage: string,
+    steps: string[],
+    reversible: boolean,
+    edges: edgeAttributes[],
+  }
+
 const colorByConference: StringToStringDictionary = {
     SEC: "red",
     B10: "blue",

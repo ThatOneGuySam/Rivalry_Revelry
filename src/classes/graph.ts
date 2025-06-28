@@ -177,6 +177,13 @@ export class Graph{
         this.edges.push(new Edge(from, to, strength));
     }
 
+    makeEdgeByName(source: string, dest: string, strength: number): void{
+        //Add edge into system
+        const from = this.findVertex(source)!;
+        const to = this.findVertex(dest)!;
+        this.edges.push(new Edge(from, to, strength));
+    }
+
     allEdgesForName(name: string, dests: string[], strengths: number[]){
         const v: Vertex | undefined = this.findVertex(name);
         const maxStrength: number = Math.max(...strengths);
