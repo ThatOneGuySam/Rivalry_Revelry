@@ -1,5 +1,5 @@
 import {Vertex, Graph} from "../classes/graph";
-
+import { parse } from "flatted";
 
 
 export function makeOriginalWeb(): Graph{
@@ -283,4 +283,24 @@ export function makeOriginalWeb(): Graph{
     curr_graph.allEdgesForName("Wyoming", ["Colorado St","Air Force","BYU","Utah St"], [63.8,11.8,13.9,2.6]);
 
     return curr_graph;
+}
+
+export function readSessionWeb(): Graph{
+    const webData = sessionStorage.getItem("currentWeb")
+      ? parse(sessionStorage.getItem("currentWeb")!)
+      : null;
+      if(!webData){
+        return makeOriginalWeb();
+      }
+      const result = new Graph();
+      console.log(webData);
+      for (const v of webData.vertices){
+        const toRemove = new Set([v.name!, v.conference!]);
+        const filteredSpellings = v.spellings.filter((el: string) => !toRemove.has(el));
+        result.addVertexByName(v.name, v.conference, v.logo_name, filteredSpellings);
+      }
+      for(const e of webData.edges){
+        result.makeEdgeByName(e.source.name, e.dest.name, e.strength);
+      }
+      return result;
 }

@@ -80,9 +80,9 @@ const colorByConference: StringToStringDictionary = {
         return newValues;
       }
 
-      export function initialPositionTeamCentered(teamName: string, doneTeams: string[] = [], initialRivalryWeb = new Graph(), givenWeb = makeOriginalWeb()): [Graph, userGraph, number, number]  {
+      export function initialPositionTeamCentered(teamName: string, givenWeb: userGraph = makeOriginalWeb(), doneTeams: string[] = [], initialRivalryWeb = new Graph()): [Graph, userGraph, number, number]  {
         let minX = 0;
-        let maxX = 0;  
+        let maxX = 0;
         const recursivePathSet: Map<string, recursingStep> =
             givenWeb.WebRecursionDijkstra(teamName);
           const teamsDials = new Map<string, [number, number, number]>();
@@ -163,7 +163,7 @@ const colorByConference: StringToStringDictionary = {
           if(missingTeams.length > 0){
             let bonusMinX = 0;
             let bonusMaxX = 0;
-            [initialRivalryWeb, givenWeb, bonusMinX, bonusMaxX] = initialPositionTeamCentered(missingTeams[0], doneTeams, initialRivalryWeb, givenWeb);
+            [initialRivalryWeb, givenWeb, bonusMinX, bonusMaxX] = initialPositionTeamCentered(missingTeams[0], givenWeb, doneTeams, initialRivalryWeb);
             console.log(bonusMinX);
             initialRivalryWeb.forEachNode((node, attributes) => {
                 if(node in missingTeams){

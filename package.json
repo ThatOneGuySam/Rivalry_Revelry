@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^7.1.0",
     "@sigma/node-image": "^3.0.0",
+    "flatted": "^3.3.3",
     "fuse.js": "^7.1.0",
     "graphology": "^0.26.0",
     "graphology-gexf": "^0.13.2",

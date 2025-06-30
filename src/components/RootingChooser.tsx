@@ -9,7 +9,7 @@ import {
   Avatar,
 } from "@mui/material";
 import { Vertex, Path, Graph } from "../classes/graph";
-import { makeOriginalWeb } from "../data/rivalryWeb";
+import { readSessionWeb } from "../data/rivalryWeb";
 import Fuse from "fuse.js";
 import RootPathGrid from "./RootPathGrid";
 
@@ -46,7 +46,7 @@ const RootingChooser = () => {
     return () => window.removeEventListener("resize", updateSize);
   }, [rootPath.vertices.length]);
 
-  const rivalryWeb: Graph = makeOriginalWeb();
+  const rivalryWeb: Graph = readSessionWeb();
 
   const teamOptions: Vertex[] = useMemo(() => {
     return rivalryWeb.vertices;

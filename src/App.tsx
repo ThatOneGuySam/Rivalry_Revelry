@@ -1,28 +1,25 @@
-import { useState } from "react";
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import "./App.css";
 import RootingChooser from "./components/RootingChooser";
 import GiveAReason from "./components/GiveAReason";
 import WebVisualizer from "./components/WebVisualizer";
 
-function App() {
-  const [tabIndex, setTabIndex] = useState(1);
+const tabRoutes = ["/web", "/root", "/reason"];
 
-  const handleChange = (_event: React.SyntheticEvent, newIndex: number) => {
-    setTabIndex(newIndex);
-  };
+function AppContent() {
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const renderContent = () => {
-    switch (tabIndex) {
-      case 0:
-        return <WebVisualizer />;
-      case 1:
-        return <RootingChooser />;
-      case 2:
-        return <GiveAReason />;
-      default:
-        return null;
-    }
+  const tabIndex = tabRoutes.indexOf(location.pathname);
+  const handleChange = (_: any, newValue: number) => {
+    navigate(tabRoutes[newValue]);
   };
 
   return (
@@ -30,39 +27,42 @@ function App() {
       sx={{
         display: "flex",
         flexDirection: "column",
-        width: "100vw",
         height: "100vh",
+        width: "100vw",
       }}
     >
-      <AppBar position="static" sx={{ marginBottom: "50px" }}>
+      <AppBar position="static">
         <Toolbar>
           <Typography variant="h6">Rivalry Revelry</Typography>
         </Toolbar>
-      </AppBar>
-      <Box sx={{ bgcolor: "background.paper" }}>
         <Tabs
-          value={tabIndex}
+          value={tabIndex === -1 ? 1 : tabIndex}
           onChange={handleChange}
           centered
-          indicatorColor="primary"
-          textColor="primary"
+          indicatorColor="secondary"
+          textColor="inherit"
         >
           <Tab label="Rivalry Web" />
           <Tab label="Who should I root for?" />
           <Tab label="Give me a reason..." />
         </Tabs>
-      </Box>
+      </AppBar>
 
       <Box
         sx={{
           flexGrow: 1,
-          width: "90vw", // 90% of viewport width
-          margin: "0 auto", // Center horizontally
-          overflowY: "visible",
+          width: "100%",
+          margin: "0 auto",
           paddingY: 4,
+          overflowY: "visible",
         }}
       >
-        {renderContent()}
+        <Routes>
+          <Route path="/web" element={<WebVisualizer />} />
+          <Route path="/root" element={<RootingChooser />} />
+          <Route path="/reason" element={<GiveAReason />} />
+          <Route path="*" element={<RootingChooser />} />
+        </Routes>
       </Box>
 
       <Box
@@ -72,6 +72,14 @@ function App() {
         <Typography variant="body2">My App Footer</Typography>
       </Box>
     </Box>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
 

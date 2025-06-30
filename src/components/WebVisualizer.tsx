@@ -12,6 +12,8 @@ import {
   pathAttributes,
 } from "../classes/visualizerFunctions";
 import { Graph as userGraph } from "../classes/graph";
+import { stringify } from "flatted";
+import { readSessionWeb } from "../data/rivalryWeb";
 
 const WebVisualizer: React.FC = () => {
   function cleanHighlights() {
@@ -27,7 +29,6 @@ const WebVisualizer: React.FC = () => {
         selectedEdgeRef.current.lastSize
       );
     }
-    console.log(selectedPathRef.current);
     if (selectedPathRef.current) {
       for (let i = 0; i < selectedPathRef.current.steps.length - 1; i++) {
         const stepEdge =
@@ -108,7 +109,6 @@ const WebVisualizer: React.FC = () => {
         return v.name;
       })
     );
-    console.log(stepSet);
     const edgeSet: edgeAttributes[] = [];
     for (let i = 0; i < stepSet.length - 1; i++) {
       const stepEdge =
@@ -116,7 +116,6 @@ const WebVisualizer: React.FC = () => {
         web.edge(stepSet[i + 1], stepSet[i]);
 
       edgeSet.push({ ...web.getEdgeAttributes(stepEdge) } as edgeAttributes);
-      console.log(edgeSet);
       web.setEdgeAttribute(stepEdge, "color", "rgba(255,150,0,0.8)");
       web.setEdgeAttribute(stepEdge, "size", 5);
     }
@@ -286,7 +285,6 @@ const WebVisualizer: React.FC = () => {
         },
         edgeN
       );
-      setSelectedPath(null);
       setSelectionType("edge");
       rendererRef.current?.scheduleRefresh();
     };
@@ -297,6 +295,22 @@ const WebVisualizer: React.FC = () => {
       el.removeEventListener("click", handleEdgeAddition);
     };
   }, [selectedPath]);
+  //Storage handling
+  useEffect(() => {
+    const handleUnload = () => {
+      if (givenWebRef.current) {
+        sessionStorage.setItem("currentWeb", stringify(givenWebRef.current));
+      } else {
+        sessionStorage.removeItem("currentWeb");
+      }
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+    };
+  }, [givenWebRef]);
   //
   //Start of the sigma section
   //
@@ -363,8 +377,11 @@ const WebVisualizer: React.FC = () => {
 
       requestAnimationFrame(step); // start animation
     }
-    const [rivalryWeb, userWeb, minX, maxX] =
-      initialPositionTeamCentered("Florida");
+    const userWeb = readSessionWeb();
+    const [rivalryWeb, _, minX, maxX] = initialPositionTeamCentered(
+      "Florida",
+      userWeb
+    );
     console.log(minX, maxX);
     graphRef.current = rivalryWeb;
     givenWebRef.current = userWeb;
@@ -393,11 +410,53 @@ const WebVisualizer: React.FC = () => {
       console.log(node);
       cleanHighlights();
       setSelectedEdge(null);
-      if (!selectedNodeRef.current) {
+      console.log(selectedNodeRef.current);
+      console.log(selectedPathRef.current);
+      if (
+        !selectedNodeRef.current ||
+        (selectedPathRef.current && selectedPathRef.current.sourceTeam === node)
+      ) {
         setSelectedNode(
           graphRef.current!.getNodeAttributes(node) as nodeAttributes
         );
         setSelectionType("node");
+      } else if (
+        !selectedPathRef.current &&
+        selectedNodeRef.current &&
+        graphRef.current &&
+        (graphRef.current.edge(selectedNodeRef.current.label, node) ||
+          graphRef.current.edge(node, selectedNodeRef.current.label))
+      ) {
+        const edgeData = graphRef.current!.getEdgeAttributes(
+          graphRef.current.edge(selectedNodeRef.current.label, node) ??
+            graphRef.current.edge(node, selectedNodeRef.current.label)
+        ) as edgeAttributes;
+        cleanHighlights();
+        processandSetEdgeInfo(
+          graphRef.current!,
+          edgeData,
+          (graphRef.current.edge(selectedNodeRef.current.label, node) ??
+            graphRef.current.edge(node, selectedNodeRef.current.label))!
+        );
+        setSelectionType("edge");
+      } else if (
+        selectedPathRef.current &&
+        graphRef.current &&
+        (graphRef.current.edge(selectedPathRef.current.sourceTeam, node) ||
+          graphRef.current.edge(node, selectedPathRef.current.sourceTeam))
+      ) {
+        const edgeData = graphRef.current!.getEdgeAttributes(
+          graphRef.current.edge(selectedPathRef.current.sourceTeam, node) ??
+            graphRef.current.edge(node, selectedPathRef.current.sourceTeam)
+        ) as edgeAttributes;
+        cleanHighlights();
+        processandSetEdgeInfo(
+          graphRef.current!,
+          edgeData,
+          (graphRef.current.edge(selectedPathRef.current.sourceTeam, node) ??
+            graphRef.current.edge(node, selectedPathRef.current.sourceTeam))!
+        );
+        setSelectionType("edge");
       } else if (!selectedPathRef.current) {
         processAndSetPathInfo(
           graphRef.current!,
@@ -456,7 +515,7 @@ const WebVisualizer: React.FC = () => {
       <Box sx={{ display: "flex", flexDirection: "row" }}>
         <div
           style={{
-            width: "30%",
+            width: "20%",
             border: "1px solid black",
             height: "90vmin",
             display: "flex",
@@ -662,7 +721,7 @@ const WebVisualizer: React.FC = () => {
         <div
           ref={containerRef}
           style={{
-            width: "70%",
+            width: "80%",
             height: "90vmin",
             textAlign: "left",
             border: "1px solid black",
